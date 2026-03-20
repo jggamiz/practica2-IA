@@ -79,3 +79,6 @@ Cuando realices cualquier modificación en el código, debes recompilar, así qu
 ## Más información
 Hemos creado un [fichero con preguntas frecuentes](./FAQ.md) que han ido apareciendo en las distintas sesiones de prácticas.
 
+
+Esto lo puse yo
+
