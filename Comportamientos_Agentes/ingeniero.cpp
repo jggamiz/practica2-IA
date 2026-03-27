@@ -71,6 +71,9 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   return IDLE;
 }
 
+
+
+// --------------------------------------------------------------------------------
 // Niveles avanzados (Uso de búsqueda)
 /**
  * @brief Comportamiento del ingeniero para el Nivel 2 (búsqueda).
