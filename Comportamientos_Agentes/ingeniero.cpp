@@ -43,10 +43,95 @@ Action ComportamientoIngeniero::think(Sensores sensores)
   return accion;
 }
 
+
+// --------------------------------------------------------------------------------
 // Niveles iniciales (Comportamientos reactivos simples)
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 0
+
+/**
+ * @brief Determina si la casilla es viable por altura
+ * @param casilla tipo de terreno
+ * @param dif diferencia de altura entre casillas
+ * @param zap indica si el agente tiene las zapatillas
+ * @return 'P' si no es accesible por altura y casilla en otro caso
+ */
+char ViablePorAlturaI(char casilla, int dif, bool zap) {
+  if (abs(dif)<=1 or (zap and abs(dif)<=2)) return casilla;
+  else return 'P';  
+}
+
+
+/**
+ * @brief Determina la mejor opción entre las tres casillas que tiene delante
+ * @param i terreno que tiene en la posición 1 de superficie (45 izq)
+ * @param c terreno que tiene en la posición 2 de superficie (justo delante)
+ * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param zap indica si el agente tiene las zapatillas
+ * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
+ */
+int VeoCasillaInteresanteI(char i, char c, char d, bool zap){
+  if (c=='U') return 2;
+  else if (i=='U') return 1;
+  else if (d=='U') return 3;
+  else if (!zap) {
+    if (c=='D') return 2;
+    else if (i=='D') return 1;
+    else if (d=='D') return 3; 
+  }
+  if (c=='C') return 2;
+  else if (i=='C') return 1;
+  else if (d=='C') return 3;
+  else return 0;
+}
+
+
+
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores)
 {
   Action accion = IDLE;
+  // El comportamiento de seguir un camino hasta encontrar una plata de T. Residuos
+  // Poner el valor de los sensores de visión en el mapa
+  ActualizarMapa(sensores);
+
+  // Actualización de variables de estado
+  if (sensores.superficie[0]=='D') tiene_zapatillas = true;
+
+  // Definición del comportamiento
+  if (sensores.superficie[0]=='U') return IDLE; // Llegué a una 'U'
+
+  int current_cota = sensores.cota[0];
+  char i = ViablePorAlturaI(sensores.superficie[1],sensores.cota[1]-current_cota, tiene_zapatillas);
+  char c = ViablePorAlturaI(sensores.superficie[2],sensores.cota[2]-current_cota, tiene_zapatillas);
+  char d = ViablePorAlturaI(sensores.superficie[3],sensores.cota[3]-current_cota, tiene_zapatillas);
+
+  int pos = VeoCasillaInteresanteI(i, c, d, tiene_zapatillas);
+  switch(pos) {
+    case 2:
+      accion = WALK;
+      break;
+    case 1:
+      accion = TURN_SL;
+      break;
+    case 3:
+      accion = TURN_SR;
+      break;
+    default:
+      accion = TURN_SL;
+      break;
+  }
+
+/*  if (giro45Izq != 0){
+    accion = TURN_SR;
+    giro45Izq--;
+  }
+*/
+
+  // Devolver la siguiente acción a hacer
+  last_action = accion;
   return accion;
 }
 
@@ -59,7 +144,11 @@ bool ComportamientoIngeniero::es_camino(unsigned char c) const
 {
   return (c == 'C' || c == 'D' || c == 'U');
 }
+// --------------------------------------------------------------------------------
 
+
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento reactivo del ingeniero para el Nivel 1.
  * @param sensores Datos actuales de los sensores.
@@ -70,11 +159,14 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   // TODO: Implementar comportamiento reactivo para el Nivel 1.
   return IDLE;
 }
-
+// --------------------------------------------------------------------------------
 
 
 // --------------------------------------------------------------------------------
+
 // Niveles avanzados (Uso de búsqueda)
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento del ingeniero para el Nivel 2 (búsqueda).
  * @param sensores Datos actuales de los sensores.
@@ -85,7 +177,11 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores
   // TODO: Implementar búsqueda para el Nivel 2.
   return IDLE;
 }
+// --------------------------------------------------------------------------------
 
+
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento del ingeniero para el Nivel 3.
  * @param sensores Datos actuales de los sensores.
@@ -95,7 +191,11 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
 {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
 
+
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento del ingeniero para el Nivel 4.
  * @param sensores Datos actuales de los sensores.
@@ -105,7 +205,12 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
 {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
 
+
+
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento del ingeniero para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
@@ -115,7 +220,11 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
 
+
+
+// --------------------------------------------------------------------------------
 /**
  * @brief Comportamiento del ingeniero para el Nivel 6.
  * @param sensores Datos actuales de los sensores.
@@ -125,6 +234,10 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_6(Sensores sensores
 {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
+
+
+
 
 // =========================================================================
 // FUNCIONES PROPORCIONADAS
