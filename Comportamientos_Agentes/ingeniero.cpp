@@ -89,7 +89,6 @@ int VeoCasillaInteresanteI(char i, char c, char d, bool zap){
 }
 
 
-
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores)
 {
   Action accion = IDLE;
@@ -147,8 +146,8 @@ bool ComportamientoIngeniero::es_camino(unsigned char c) const
 // --------------------------------------------------------------------------------
 
 
-
 // --------------------------------------------------------------------------------
+// NIVEL 1
 /**
  * @brief Comportamiento reactivo del ingeniero para el Nivel 1.
  * @param sensores Datos actuales de los sensores.

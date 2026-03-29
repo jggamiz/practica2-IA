@@ -29,10 +29,91 @@ Action ComportamientoTecnico::think(Sensores sensores) {
 }
 
 
-// Niveles del técnico
+// --------------------------------------------------------------------------------
+// Niveles iniciales (Comportamientos reactivos simples)
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 0
+
+/**
+ * @brief Determina si la casilla es viable por altura
+ * @param casilla tipo de terreno
+ * @param dif diferencia de altura entre casillas
+ * @return 'P' si no es accesible por altura y casilla en otro caso
+ */
+char ViablePorAlturaT(char casilla, int dif) {
+  if (abs(dif)<=1) return casilla;
+  else return 'P';  
+}
+
+
+/**
+ * @brief Determina la mejor opción entre las tres casillas que tiene delante
+ * @param i terreno que tiene en la posición 1 de superficie (45 izq)
+ * @param c terreno que tiene en la posición 2 de superficie (justo delante)
+ * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param zap indica si el agente tiene las zapatillas
+ * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
+ */
+int VeoCasillaInteresanteT(char i, char c, char d, bool zap){
+  if (c=='U') return 2;
+  else if (i=='U') return 1;
+  else if (d=='U') return 3;
+  else if (!zap) {
+    if (c=='D') return 2;
+    else if (i=='D') return 1;
+    else if (d=='D') return 3; 
+  }
+  if (c=='C') return 2;
+  else if (i=='C') return 1;
+  else if (d=='C') return 3;
+  else if (zap) { // cuando el técnico tiene las zapatillas, 'B' es transitable
+    if (c=='B') return 2;
+    else if (i=='B') return 1;
+    else if (d=='B') return 3;
+  }
+  
+  return 0;
+}
+
+
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   Action accion = IDLE;
+  // El comportamiento de seguir un camino hasta encontrar una plata de T. Residuos
+  // Poner el valor de los sensores de visión en el mapa
+  ActualizarMapa(sensores);
 
+  // Actualización de variables de estado
+  if (sensores.superficie[0]=='D') tiene_zapatillas = true;
+
+  // Definición del comportamiento
+  if (sensores.superficie[0]=='U') return IDLE; // ha llegado a una 'U'
+
+  int current_cota = sensores.cota[0];
+  char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-current_cota);
+  char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-current_cota);
+  char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-current_cota);
+
+  int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas);
+  switch (pos) {
+  case 2:
+      accion = WALK;
+      break;
+    case 1:
+      accion = TURN_SL;
+      break;
+    case 3:
+      accion = TURN_SR;
+      break;
+    default:
+      accion = TURN_SL;
+      break;
+  }
+
+  // Devolver la siguiente acción a hacer
+  last_action = accion;
   return accion;
 }
 
@@ -44,8 +125,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
 bool ComportamientoTecnico::es_camino(unsigned char c) const {
   return (c == 'C' || c == 'D' || c == 'U');
 }
+// --------------------------------------------------------------------------------
 
 
+// --------------------------------------------------------------------------------
+// NIVEL 1
 /**
  * @brief Comportamiento reactivo del técnico para el Nivel 1.
  * @param sensores Datos actuales de los sensores.
