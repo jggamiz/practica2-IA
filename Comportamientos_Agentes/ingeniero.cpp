@@ -95,17 +95,42 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   // El comportamiento de seguir un camino hasta encontrar una plata de T. Residuos
   // Poner el valor de los sensores de visión en el mapa
   ActualizarMapa(sensores);
-
+  
   // Actualización de variables de estado
   if (sensores.superficie[0]=='D') tiene_zapatillas = true;
 
-  // Definición del comportamiento
-  if (sensores.superficie[0]=='U') return IDLE; // Llegué a una 'U'
+  // Descripción del comportamiento
+  if (sensores.superficie[0]=='U') return IDLE; // Llegué a la meta
 
+  // 1. Giros: Terminar maniobras pendientes
+  if (giro45Izq > 0) {
+    giro45Izq--;
+    accion = TURN_SL;
+    last_action = accion;
+    return accion; 
+  }
+
+  // 2. Evitar colisionar con el técnico (de frente)
+  if (sensores.agentes[2] == 't') {
+    accion = TURN_SL; // Giramos 45º ahora
+    giro45Izq = 1;    // Memorizamos que nos faltan otros 45º para el siguiente ciclo
+    last_action = accion;
+    return accion;
+  }
+
+  // 3. Comportamiento normal
   int current_cota = sensores.cota[0];
-  char i = ViablePorAlturaI(sensores.superficie[1],sensores.cota[1]-current_cota, tiene_zapatillas);
-  char c = ViablePorAlturaI(sensores.superficie[2],sensores.cota[2]-current_cota, tiene_zapatillas);
-  char d = ViablePorAlturaI(sensores.superficie[3],sensores.cota[3]-current_cota, tiene_zapatillas);
+  
+  // Si el técnico no está de frente, sino en una diagonal (1 o 3) y en esa diagonal también hay una casilla
+  // interesante ('U' o 'D'), la función VeoCasillaInteresanteI manda al agente allí y habrá colisión
+  // Para arreglarlo mandamos un 'P' directamente en el param casilla en caso de que haya agente
+  char sup_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
+  char sup_c = sensores.superficie[2]; // Ya cubierto arriba, pero por coherencia
+  char sup_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+
+  char i = ViablePorAlturaI(sup_i, sensores.cota[1]-current_cota, tiene_zapatillas);
+  char c = ViablePorAlturaI(sup_c, sensores.cota[2]-current_cota, tiene_zapatillas);
+  char d = ViablePorAlturaI(sup_d, sensores.cota[3]-current_cota, tiene_zapatillas);
 
   int pos = VeoCasillaInteresanteI(i, c, d, tiene_zapatillas);
   switch(pos) {
@@ -120,19 +145,14 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
       break;
     default:
       accion = TURN_SL;
+      // giro45Izq = 1; // para girar 90º en vez de 45º 
       break;
   }
 
-/*  if (giro45Izq != 0){
-    accion = TURN_SR;
-    giro45Izq--;
-  }
-*/
-
-  // Devolver la siguiente acción a hacer
   last_action = accion;
   return accion;
 }
+
 
 /**
  * @brief Comprueba si una celda es de tipo camino transitable.
