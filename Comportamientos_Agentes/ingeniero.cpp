@@ -102,7 +102,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   // Descripción del comportamiento
   if (sensores.superficie[0]=='U') return IDLE; // Llegué a la meta
 
-  // 1. Giros: Terminar maniobras pendientes
+  // 1. Terminar maniobras pendientes
   if (giro45Izq > 0) {
     giro45Izq--;
     accion = TURN_SL;

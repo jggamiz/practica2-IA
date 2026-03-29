@@ -91,6 +91,13 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   // Definición del comportamiento
   if (sensores.superficie[0]=='U') return IDLE; // ha llegado a una 'U'
 
+  if (giro45Izq > 0) {
+    giro45Izq--;
+    accion = TURN_SL;
+    last_action = accion;
+    return accion; 
+  }
+
   int current_cota = sensores.cota[0];
   char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-current_cota);
   char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-current_cota);
