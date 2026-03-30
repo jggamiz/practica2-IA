@@ -190,12 +190,12 @@ int ValoraTerrenoI(char terreno) {
       return 3; // Hierba: cuesta más energía
       break;
       
-    case 'A': case 'B':
+    case 'A':
       return 1; // Bosque y Agua: muy costosos
       break;
 
-    case 'P': case 'M': default:
-      return 0; // Precipicios y Muros (Intransitables)
+    case 'P': case 'B': case 'M': default:
+      return 0; // Precipicios, Bosques y Muros (Intransitables)
       break;
   }
 }
@@ -289,7 +289,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
       // Si nos hemos metido en un rincón donde ni recto ni diagonales son transitables,
       // forzamos un giro de 90º para darnos la vuelta poco a poco.
       accion = TURN_SL;
-      giro45Izq = 1; 
+      // giro45Izq = 1; 
       break;
   }
 

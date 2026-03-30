@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <cstdlib>
 
 using namespace std;
 
@@ -137,13 +138,140 @@ bool ComportamientoTecnico::es_camino(unsigned char c) const {
 
 // --------------------------------------------------------------------------------
 // NIVEL 1
+
+/**
+ * @brief Asigna una cómo de atractivo es un terreno dado
+ * @param terreno tipo de terreno
+ * @param zap indica si el agente tiene las zapatillas
+ * @return Puntuación valorando el atractivo de dicho terreno
+ */
+int ValoraTerrenoT(char terreno, bool zap) {
+  switch (terreno)
+  {
+    case 'C': case 'S':
+      return 5; // Objetivo principal: Caminos y Senderos
+      break;
+    
+    case 'X': case 'U': case 'D':
+      return 4; // Otros elementos o casillas útiles
+      break;
+    
+    case 'H':
+      return 2; // Hierba: cuesta más energía
+      break;
+      
+    case 'A':
+      return 1; // Agua: muy costoso
+      break;
+
+    case 'B':
+      if (zap)
+        return 3; // Si tiene zapatillas, transitable
+      else
+        return 0; // Si no, no transitable
+      break;
+
+    case 'P': case 'M': default:
+      return 0; // Precipicios y Muros (Intransitables)
+      break;
+  }
+}
+
+/**
+ * @brief Determina la mejor opción para explorar evitando bucles
+ * @param i terreno que tiene en la posición 1 de superficie (45 izq)
+ * @param c terreno que tiene en la posición 2 de superficie (justo delante)
+ * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param zap indica si el agente tiene las zapatillas
+ * @return 2 (WALK), 1 (TURN_SL), 3 (TURN_SR) y 0 si está bloqueado
+ */
+int VeoCasillaExploracionT(char i, char c, char d, bool zap) {
+  int vi = ValoraTerrenoT(i, zap);
+  int vc = ValoraTerrenoT(c, zap);
+  int vd = ValoraTerrenoT(d, zap);
+
+  // Si estamos rodeados de obstáculos forzamos un giro
+  if (vi==0 && vc==0 && vd==0) return 0;
+
+  // La prioridad máaxima es ir de frente si es igual o mejor que los lados
+  if (vc>=vi && vc>=vd && vc>0) return 2;
+
+  // Si ir de frente es peor, elegimos el mejor de los lados
+  if (vi>vd) return 1;
+  if (vd>vi) return 3;
+
+  // Si los dos lados son igual de buenos, elegimos uno al azar
+  if (rand()%2 == 0) return 1;
+  else return 3;
+}
+
+
 /**
  * @brief Comportamiento reactivo del técnico para el Nivel 1.
  * @param sensores Datos actuales de los sensores.
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+
+  // Actualizamos el mapa con lo que vemos ahora mismo
+  ActualizarMapa(sensores);
+
+  // Actualizar variables de estado
+  if (sensores.superficie[0]=='D') tiene_zapatillas = true;
+
+  // Terminar maniobras pendientes
+  if (giro45Izq>0) {
+    giro45Izq--;
+    accion = TURN_SL;
+    last_action = accion;
+    return accion;
+  }
+
+  // Esquivar técnico de frente
+  if (sensores.agentes[2]=='t') {
+    accion = TURN_SL;
+    giro45Izq = 1; // Recordamos que estamos en mitad del giro
+    last_action = accion;
+    return accion;
+  }
+
+  // Evaluamos el terreno cercano
+  int current_cota = sensores.cota[0];
+
+  // Comprobamos que el técnico no esté en las diagonales
+  char sup_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
+  char sup_c = sensores.superficie[2]; 
+  char sup_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+
+  // Comprobamos la viabilidad por altura (y por colisiones)
+  char i = ViablePorAlturaT(sup_i, sensores.cota[1]-current_cota);
+  char c = ViablePorAlturaT(sup_c, sensores.cota[2]-current_cota);
+  char d = ViablePorAlturaT(sup_d, sensores.cota[3]-current_cota);
+
+  // Toma de decisión
+  int pos = VeoCasillaExploracionT(i, c, d, tiene_zapatillas);
+  
+  switch(pos) {
+    case 2:
+      accion = WALK;
+      break;
+    case 1:
+      accion = TURN_SL; // Avanzamos en diagonal izquierda
+      break;
+    case 3:
+      accion = TURN_SR; // Avanzamos en diagonal derecha
+      break;
+    default:
+      // Si nos hemos metido en un rincón donde ni recto ni diagonales son transitables,
+      // forzamos un giro de 90º para darnos la vuelta poco a poco.
+      accion = TURN_SL;
+      giro45Izq = 1; 
+      break;
+  }
+
+  last_action = accion;
+  return accion;
 }
 
 /**
