@@ -47,7 +47,8 @@ public:
                        std::vector<std::vector<unsigned char>> mapaC): 
                        Comportamiento(mapaR, mapaC) {
     // Inicializar Variables de Estado
-
+    hayPlan = false;
+    tiene_zapatillas = false;
   }
 
   ComportamientoTecnico(const ComportamientoTecnico &comport): Comportamiento(comport) {}
@@ -84,7 +85,7 @@ public:
  * @return Acción a realizar.
  */
   Action ComportamientoTecnicoNivel_1(Sensores sensores);
-  
+
 /**
  * @brief Comportamiento del técnico para el Nivel 2.
  * @param sensores Datos actuales de los sensores.
@@ -119,6 +120,13 @@ public:
  * @return Acción a realizar.
  */
   Action ComportamientoTecnicoNivel_6(Sensores sensores);
+
+/**
+ * @brief Comportamiento del técnico para el Nivel Especial.
+ * @param sensores Datos actuales de los sensores.
+ * @return Acción a realizar.
+ */
+  Action ComportamientoTecnicoNivel_E(Sensores sensores);
 
 protected:
   // =========================================================================
@@ -195,6 +203,9 @@ Action last_action;     // Almacena la última acción realizada
 bool tiene_zapatillas;  // Indica si el agente tiene las zapatillas
 int giro45Izq;          // Indica el número de giros a la izqiuerda que quedan por dar
 
+// Nivel E
+bool hayPlan;            // Indica si hay una plan que ejecutar
+list<Action> plan;       // Almacena el plan a realizar.
 };
 
 #endif

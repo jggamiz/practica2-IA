@@ -18,27 +18,13 @@ Action ComportamientoIngeniero::think(Sensores sensores)
   // Decisión del agente según el nivel
   switch (sensores.nivel)
   {
-  case 0:
-    accion = ComportamientoIngenieroNivel_0(sensores);
-    break;
-  case 1:
-    accion = ComportamientoIngenieroNivel_1(sensores);
-    break;
-  case 2:
-    accion = ComportamientoIngenieroNivel_2(sensores);
-    break;
-  case 3:
-    accion = ComportamientoIngenieroNivel_3(sensores);
-    break;
-  case 4:
-    accion = ComportamientoIngenieroNivel_4(sensores);
-    break;
-  case 5:
-    accion = ComportamientoIngenieroNivel_5(sensores);
-    break;
-  case 6:
-    accion = ComportamientoIngenieroNivel_6(sensores);
-    break;
+  case 0: accion = ComportamientoIngenieroNivel_0(sensores); break;
+  case 1: accion = ComportamientoIngenieroNivel_1(sensores); break;
+  case 2: accion = ComportamientoIngenieroNivel_2(sensores); break;
+  case 3: accion = ComportamientoIngenieroNivel_3(sensores); break;
+  case 4: accion = ComportamientoIngenieroNivel_4(sensores); break;
+  case 5: accion = ComportamientoIngenieroNivel_5(sensores); break;
+  case 6: accion = ComportamientoIngenieroNivel_6(sensores); break;
   }
 
   return accion;
@@ -324,6 +310,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
 // Niveles avanzados (Uso de búsqueda)
 
 // --------------------------------------------------------------------------------
+// NIVEL 2
 /**
  * @brief Comportamiento del ingeniero para el Nivel 2 (búsqueda).
  * @param sensores Datos actuales de los sensores.
@@ -339,6 +326,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores
 
 
 // --------------------------------------------------------------------------------
+// NIVEL 3
 /**
  * @brief Comportamiento del ingeniero para el Nivel 3.
  * @param sensores Datos actuales de los sensores.
@@ -353,6 +341,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
 
 
 // --------------------------------------------------------------------------------
+// NIVEL 4
 /**
  * @brief Comportamiento del ingeniero para el Nivel 4.
  * @param sensores Datos actuales de los sensores.
@@ -368,6 +357,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
 
 
 // --------------------------------------------------------------------------------
+// NIVEL 5
 /**
  * @brief Comportamiento del ingeniero para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
@@ -382,6 +372,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
 
 // --------------------------------------------------------------------------------
+// NIVEL 6
 /**
  * @brief Comportamiento del ingeniero para el Nivel 6.
  * @param sensores Datos actuales de los sensores.

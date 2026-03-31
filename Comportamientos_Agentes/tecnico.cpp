@@ -20,7 +20,8 @@ Action ComportamientoTecnico::think(Sensores sensores) {
     case 0: accion = ComportamientoTecnicoNivel_0(sensores); break;
     case 1: accion = ComportamientoTecnicoNivel_1(sensores); break;
     case 2: accion = ComportamientoTecnicoNivel_2(sensores); break;
-    case 3: accion = ComportamientoTecnicoNivel_3(sensores); break;
+    // case 3: accion = ComportamientoTecnicoNivel_3(sensores); break;
+    case 3: accion = ComportamientoTecnicoNivel_E(sensores); break;
     case 4: accion = ComportamientoTecnicoNivel_4(sensores); break;
     case 5: accion = ComportamientoTecnicoNivel_5(sensores); break;
     case 6: accion = ComportamientoTecnicoNivel_6(sensores); break;
@@ -273,6 +274,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
   last_action = accion;
   return accion;
 }
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 2
 
 /**
  * @brief Comportamiento del técnico para el Nivel 2.
@@ -282,6 +288,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 3
 
 /**
  * @brief Comportamiento del técnico para el Nivel 3.
@@ -291,6 +302,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 4
 
 /**
  * @brief Comportamiento del técnico para el Nivel 4.
@@ -300,6 +316,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 5
 
 /**
  * @brief Comportamiento del técnico para el Nivel 5.
@@ -309,6 +330,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// NIVEL 6
 
 /**
  * @brief Comportamiento del técnico para el Nivel 6.
@@ -318,8 +344,47 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
   return IDLE;
 }
+// --------------------------------------------------------------------------------
 
 
+// --------------------------------------------------------------------------------
+// NIVEL ESPECIAL
+
+list<Action> AvanzaASaltosDeCaballo() {
+  list<Action> secuencia;
+
+  secuencia.push_back(WALK);
+  secuencia.push_back(WALK);
+  secuencia.push_back(TURN_SR);
+  secuencia.push_back(TURN_SR);
+  secuencia.push_back(WALK);
+
+  return secuencia;
+}
+
+/**
+ * @brief Comportamiento del técnico para el Nivel Especial.
+ * @param sensores Datos actuales de los sensores.
+ * @return Acción a realizar.
+ */
+Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
+  Action accion = IDLE;
+
+  if (!hayPlan) {
+    plan = AvanzaASaltosDeCaballo();
+    hayPlan = true;
+  }
+
+  if (hayPlan && plan.size()>0) {
+    accion = plan.front();
+    plan.pop_front();
+  }
+
+  if (plan.size()==0) hayPlan = false;
+
+  return accion;
+}
+// --------------------------------------------------------------------------------
 
 
 // =========================================================================
