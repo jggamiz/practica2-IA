@@ -8,6 +8,25 @@
 
 #include "comportamientos/comportamiento.hpp"
 
+
+struct EstadoT {
+  ubicacion site;
+  bool zapatillas;
+
+  bool operator==(const EstadoT &st) const {
+    return site==st.site && zapatillas==st.zapatillas;
+  }
+};
+
+struct NodoT {
+  EstadoT estado;
+  list<Action> secuencia;
+
+  bool operator==(const NodoT &node) const {
+    return estado==node.estado; // no importa el campo secuencia para que dos nodo sean iguales
+  }
+};
+
 // =========================================================================
 // DOCUMENTACIÓN PARA ESTUDIANTES
 // =========================================================================
@@ -18,8 +37,6 @@
  * Esta clase implementa el comportamiento del agente Técnico en el mundo Belkan.
  * El técnico colabora con el ingeniero para resolver el problema de instalación de tuberías
  */
-
-
 
 class ComportamientoTecnico : public Comportamiento {
 public:
@@ -127,6 +144,22 @@ public:
  * @return Acción a realizar.
  */
   Action ComportamientoTecnicoNivel_E(Sensores sensores);
+
+/**
+ * @brief Primera aproximación del algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ */
+list<Action> B_Anchura(const EstadoT &inicio, const EstadoT &final, 
+                       const vector<vector<unsigned char>> &terreno,
+                       const vector<vector<unsigned char>> &altura
+);
 
 protected:
   // =========================================================================

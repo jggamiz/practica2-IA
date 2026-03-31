@@ -294,6 +294,151 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
 // --------------------------------------------------------------------------------
 // NIVEL 3
 
+// Funciones auxiliares
+EstadoT NextCasillaTecnico(const EstadoT &st) {
+  EstadoT next = st;
+
+  switch(st.site.brujula) {
+    case norte:
+      next.site.f = st.site.f-1;
+      break;
+    case noreste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c+1;
+      break;
+    case este:
+      next.site.c = st.site.c+1;
+      break;
+    case sureste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c+1;
+      break;
+    case sur:
+      next.site.c = st.site.f+1;
+      break;
+    case suroeste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c-1;
+      break;
+    case oeste:
+      next.site.c = st.site.c-1;
+      break;
+    case noroeste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c-1;
+      break; 
+  }
+
+  return next;
+}
+
+bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
+                             const vector<vector<unsigned char>> &altura) {
+  EstadoT next = NextCasillaTecnico(st);
+  bool check1 = false, check2=false, check3=false;
+  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
+  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]!='B' and st.zapatillas);
+  check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
+  
+  return check1 and check2 and check3;
+}
+
+EstadoT applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, 
+               const vector<vector<unsigned char>> &altura){
+  EstadoT next = st;
+  switch(accion){
+    case WALK:
+      if (CasillaAccesibleTecnico(st,terreno,altura)){
+        next = NextCasillaTecnico(st);
+      }
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+
+  return next;
+}
+
+/**
+ * @brief Primera aproximación del algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ */
+list<Action> ComportamientoTecnico::B_Anchura(const EstadoT &inicio, const EstadoT &final, 
+                                              const vector<vector<unsigned char>> &terreno,
+                                              const vector<vector<unsigned char>> &altura) {
+  NodoT current_node;
+  list<NodoT> frontier;
+  list<NodoT> explored; 
+  list<Action> path;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = (current_node.estado.site.f==final.site.f && current_node.estado.site.c==final.site.c);
+  
+  while (!SolutionFound and !frontier.empty()) {
+    frontier.pop_front();
+    explored.push_back(current_node);
+
+    // Compruebo si estoy en una casilla que da las zapatillas
+    if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
+
+    // Genero el hijo resultante de aplicar la acción WALK
+    NodoT child_Walk = current_node;
+    child_Walk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    if (child_Walk.estado.site.f==final.site.f and child_Walk.estado.site.c==final.site.c) {
+      // El hijo generado es solución
+      child_Walk.secuencia.push_back(WALK);
+      current_node = child_Walk;
+      SolutionFound = true;
+    } else if (!Find(child_Walk, frontier) and !Find(child_Walk, explored)) {
+      // Se mete en la lista de frontier después de añadir la acción WALK a la secuencia
+      child_Walk.secuencia.push_back(WALK);
+      frontier.push_back(child_Walk);
+    }
+
+    if (!SolutionFound) {
+      // El hijo resultante de aplicar la acción TURN_SR
+      NodoT child_TurnSR = current_node;
+      child_TurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
+      if (!Find(child_TurnSR, frontier) and !Find(child_TurnSR, explored)) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SR a la secuencia
+        child_TurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(child_TurnSR);
+      }
+
+      // El hijo resultante de aplicar la acción TURN_SL
+      NodoT child_TurnSL = current_node;
+      child_TurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
+      if (!Find(child_TurnSL, frontier) and !Find(child_TurnSL, explored)) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SL a la secuencia
+        child_TurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(child_TurnSL);
+      }
+    }
+
+    // Paso a evaluar el siguient nodo en la lista frontier
+    if (!SolutionFound and !frontier.empty()) {
+      current_node = frontier.front();
+      SolutionFound = (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c);
+    }
+  }
+
+  // Devuelvo el camino encontrado
+  if (SolutionFound) path=current_node.secuencia;
+  return path;
+}
+
 /**
  * @brief Comportamiento del técnico para el Nivel 3.
  * @param sensores Datos actuales de los sensores.
@@ -375,7 +520,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
     hayPlan = true;
   }
 
-  if (hayPlan && plan.size()>0) {
+  if (hayPlan and plan.size()>0) {
     accion = plan.front();
     plan.pop_front();
   }
