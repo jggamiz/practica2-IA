@@ -278,6 +278,26 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   switch(pos) {
     case 2:
       accion = WALK;
+      /*{
+        // 1. La casilla intermedia (2) debe estar libre de agentes
+        bool intermedio_libre = (sensores.agentes[2] == '_'); 
+        
+        // 2. La casilla final (6) debe merecer la pena
+        bool final_interesante = (ValoraTerrenoI(sensores.superficie[6]) >= 4);
+        
+        // 3. La diferencia de altura entre la actual (0) y la final (6)
+        int diff_altura = abs(sensores.cota[6]-current_cota);
+        bool altura_ok = diff_altura < (tiene_zapatillas ? 3 : 2);
+        
+        // Si se cumplen todas las condiciones físicas, ¡saltamos!
+        // Opcional: Podrías añadir "&& ValoraTerrenoI(sensores.superficie[6]) >= 4" 
+        // si solo quieres que salte cuando caiga en caminos o senderos para no gastar batería a lo tonto.
+        if (intermedio_libre && final_interesante && altura_ok) {
+          accion = JUMP;
+        } else {
+          accion = WALK;
+        }
+      }*/
       break;
     case 1:
       accion = TURN_SL; // Avanzamos en diagonal izquierda
