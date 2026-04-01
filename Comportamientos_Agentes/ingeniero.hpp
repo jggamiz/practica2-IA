@@ -29,11 +29,22 @@ struct NodoI {
     return estado==node.estado;
   }
 
+  bool operator<(const NodoI &node) const {
+    if (estado.site.f < node.estado.site.f) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c < node.estado.site.c) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and
+             estado.site.brujula < node.estado.site.brujula) return true;
+    else if (estado.site.f == node.estado.site.f and estado.site.c == node.estado.site.c and
+             estado.site.brujula == node.estado.site.brujula and estado.zapatillas < node.estado.zapatillas) return true;
+    else return false;
+  }
+
+  /*
   // priority_queue extrae el elemento MAYOR por defecto. Al usar '>' 
   // la cola extrae siempre el nodo con el MENOR coste de tiempo
   bool operator<(const NodoI &node) const {
     return coste_tiempo>node.coste_tiempo;
-  }
+  }*/
 };
 
 class ComportamientoIngeniero : public Comportamiento {

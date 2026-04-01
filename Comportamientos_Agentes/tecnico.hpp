@@ -29,8 +29,8 @@ struct NodoT {
   bool operator<(const NodoT &node) const {
     if (estado.site.f<node.estado.site.f) return true;
     else if (estado.site.f==node.estado.site.f and estado.site.c<node.estado.site.c) return true;
-    else if (estado.site.f==node.estado.site.f and estado.site.c==node.estado.site.c
-             and estado.site.brujula<node.estado.site.brujula) return true;
+    else if (estado.site.f==node.estado.site.f and estado.site.c==node.estado.site.c and
+             estado.site.brujula<node.estado.site.brujula) return true;
     else if (estado.site.f==node.estado.site.f and estado.site.c==node.estado.site.c and
              estado.site.brujula==node.estado.site.brujula and estado.zapatillas<node.estado.zapatillas) return true;
     else return false;

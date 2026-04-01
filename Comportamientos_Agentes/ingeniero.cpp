@@ -312,6 +312,65 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
 // NIVEL 2
 
 /**
+ * @brief Calcula el estado resultante al avanzar una casilla en la dirección actual
+ * @param st Estado actual del agente (ubicación y orientación).
+ * @return Nuevo estado con la posición avanzada una casilla en la misma orientación.
+ */
+EstadoI NextCasillaIngeniero(const EstadoI &st) {
+  EstadoI next = st;
+
+  switch(st.site.brujula) {
+    case norte:
+      next.site.f = st.site.f-1;
+      break;
+    case noreste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c+1;
+      break;
+    case este:
+      next.site.c = st.site.c+1;
+      break;
+    case sureste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c+1;
+      break;
+    case sur:
+      next.site.f = st.site.f+1;
+      break;
+    case suroeste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c-1;
+      break;
+    case oeste:
+      next.site.c = st.site.c-1;
+      break;
+    case noroeste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c-1;
+      break; 
+  }
+
+  return next;
+}
+
+/**
+ * @brief Comprueba si la casilla situada delante del agente es transitable, 
+ *        considerando el terreno y la diferencia de altura.
+ * @param st Estado actual del agente.
+ * @param accion Acción a realizar (WALK o JUMP), pues en esta caso las condiciones cambian
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas (alturas).
+ * @return true si la casilla de delante y false en caso contrario.
+ */
+bool CasillaAccesibleIngeniero(const EstadoI &st, Action accion, const vector<vector<unsigned char>> &terreno,
+                             const vector<vector<unsigned char>> &altura) {
+  EstadoI next = NextCasillaIngeniero(st);
+
+
+
+}
+
+/**
  * @brief Comportamiento del ingeniero para el Nivel 2 (búsqueda).
  * @param sensores Datos actuales de los sensores.
  * @return Acción a realizar.
