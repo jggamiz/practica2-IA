@@ -192,10 +192,10 @@ int VeoCasillaExploracionT(char i, char c, char d, bool zap) {
   int vd = ValoraTerrenoT(d, zap);
 
   // Si estamos rodeados de obstáculos forzamos un giro
-  if (vi==0 && vc==0 && vd==0) return 0;
+  if (vi==0 and vc==0 and vd==0) return 0;
 
   // La prioridad máaxima es ir de frente si es igual o mejor que los lados
-  if (vc>=vi && vc>=vd && vc>0) return 2;
+  if (vc>=vi and vc>=vd and vc>0) return 2;
 
   // Si ir de frente es peor, elegimos el mejor de los lados
   if (vi>vd) return 1;
@@ -294,151 +294,6 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
 // --------------------------------------------------------------------------------
 // NIVEL 3
 
-// Funciones auxiliares
-EstadoT NextCasillaTecnico(const EstadoT &st) {
-  EstadoT next = st;
-
-  switch(st.site.brujula) {
-    case norte:
-      next.site.f = st.site.f-1;
-      break;
-    case noreste:
-      next.site.f = st.site.f-1;
-      next.site.c = st.site.c+1;
-      break;
-    case este:
-      next.site.c = st.site.c+1;
-      break;
-    case sureste:
-      next.site.f = st.site.f+1;
-      next.site.c = st.site.c+1;
-      break;
-    case sur:
-      next.site.c = st.site.f+1;
-      break;
-    case suroeste:
-      next.site.f = st.site.f+1;
-      next.site.c = st.site.c-1;
-      break;
-    case oeste:
-      next.site.c = st.site.c-1;
-      break;
-    case noroeste:
-      next.site.f = st.site.f-1;
-      next.site.c = st.site.c-1;
-      break; 
-  }
-
-  return next;
-}
-
-bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
-                             const vector<vector<unsigned char>> &altura) {
-  EstadoT next = NextCasillaTecnico(st);
-  bool check1 = false, check2=false, check3=false;
-  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
-  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]!='B' and st.zapatillas);
-  check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
-  
-  return check1 and check2 and check3;
-}
-
-EstadoT applyT(Action accion, const EstadoT & st, const vector<vector<unsigned char>> &terreno, 
-               const vector<vector<unsigned char>> &altura){
-  EstadoT next = st;
-  switch(accion){
-    case WALK:
-      if (CasillaAccesibleTecnico(st,terreno,altura)){
-        next = NextCasillaTecnico(st);
-      }
-      break;
-    case TURN_SR:
-      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
-      break;
-    case TURN_SL:
-      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
-      break;
-  }
-
-  return next;
-}
-
-/**
- * @brief Primera aproximación del algoritmo de búsqueda en anchura
- * 
- * @param inicio Estado inicial de la búsqueda
- * @param final Estado final de la búsqueda
- * @param terreno Matriz que contiene la información del terreno
- * @param altura Matriz que contiene las alturas del mapa
- * 
- * @return La secuencia de acciones para llegar al estado final
- * @note Devuelve un plan vacío si no es posible encontrar un plan válido
- */
-list<Action> ComportamientoTecnico::B_Anchura(const EstadoT &inicio, const EstadoT &final, 
-                                              const vector<vector<unsigned char>> &terreno,
-                                              const vector<vector<unsigned char>> &altura) {
-  NodoT current_node;
-  list<NodoT> frontier;
-  list<NodoT> explored; 
-  list<Action> path;
-
-  current_node.estado = inicio;
-  frontier.push_back(current_node);
-  bool SolutionFound = (current_node.estado.site.f==final.site.f && current_node.estado.site.c==final.site.c);
-  
-  while (!SolutionFound and !frontier.empty()) {
-    frontier.pop_front();
-    explored.push_back(current_node);
-
-    // Compruebo si estoy en una casilla que da las zapatillas
-    if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
-
-    // Genero el hijo resultante de aplicar la acción WALK
-    NodoT child_Walk = current_node;
-    child_Walk.estado = applyT(WALK, current_node.estado, terreno, altura);
-    if (child_Walk.estado.site.f==final.site.f and child_Walk.estado.site.c==final.site.c) {
-      // El hijo generado es solución
-      child_Walk.secuencia.push_back(WALK);
-      current_node = child_Walk;
-      SolutionFound = true;
-    } else if (!Find(child_Walk, frontier) and !Find(child_Walk, explored)) {
-      // Se mete en la lista de frontier después de añadir la acción WALK a la secuencia
-      child_Walk.secuencia.push_back(WALK);
-      frontier.push_back(child_Walk);
-    }
-
-    if (!SolutionFound) {
-      // El hijo resultante de aplicar la acción TURN_SR
-      NodoT child_TurnSR = current_node;
-      child_TurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
-      if (!Find(child_TurnSR, frontier) and !Find(child_TurnSR, explored)) {
-        // Se mete en la lista de frontier después de añadir la acción TURN_SR a la secuencia
-        child_TurnSR.secuencia.push_back(TURN_SR);
-        frontier.push_back(child_TurnSR);
-      }
-
-      // El hijo resultante de aplicar la acción TURN_SL
-      NodoT child_TurnSL = current_node;
-      child_TurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
-      if (!Find(child_TurnSL, frontier) and !Find(child_TurnSL, explored)) {
-        // Se mete en la lista de frontier después de añadir la acción TURN_SL a la secuencia
-        child_TurnSL.secuencia.push_back(TURN_SL);
-        frontier.push_back(child_TurnSL);
-      }
-    }
-
-    // Paso a evaluar el siguient nodo en la lista frontier
-    if (!SolutionFound and !frontier.empty()) {
-      current_node = frontier.front();
-      SolutionFound = (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c);
-    }
-  }
-
-  // Devuelvo el camino encontrado
-  if (SolutionFound) path=current_node.secuencia;
-  return path;
-}
-
 /**
  * @brief Comportamiento del técnico para el Nivel 3.
  * @param sensores Datos actuales de los sensores.
@@ -507,6 +362,188 @@ list<Action> AvanzaASaltosDeCaballo() {
   return secuencia;
 }
 
+// Funciones auxiliares
+
+/**
+ * @brief Calcula el estado resultante al avanzar una casilla en la dirección actual
+ * @param st Estado actual del agente (ubicación y orientación).
+ * @return Nuevo estado con la posición avanzada una casilla en la misma orientación.
+ */
+EstadoT NextCasillaTecnico(const EstadoT &st) {
+  EstadoT next = st;
+
+  switch(st.site.brujula) {
+    case norte:
+      next.site.f = st.site.f-1;
+      break;
+    case noreste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c+1;
+      break;
+    case este:
+      next.site.c = st.site.c+1;
+      break;
+    case sureste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c+1;
+      break;
+    case sur:
+      next.site.f = st.site.f+1;
+      break;
+    case suroeste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c-1;
+      break;
+    case oeste:
+      next.site.c = st.site.c-1;
+      break;
+    case noroeste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c-1;
+      break; 
+  }
+
+  return next;
+}
+
+/**
+ * @brief Comprueba si la casilla situada delante del agente es transitable, 
+ *        considerando el terreno y la diferencia de altura.
+ * @param st Estado actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas (alturas).
+ * @return true si la casilla de delante y false en caso contrario.
+ */
+bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
+                             const vector<vector<unsigned char>> &altura) {
+  EstadoT next = NextCasillaTecnico(st);
+  bool check1 = false, check2=false, check3=false;
+  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
+  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]=='B' and st.zapatillas);
+  check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
+  
+  return check1 and check2 and check3;
+}
+
+/**
+ * @brief Aplica una acción sobre un estado.
+ * @param accion Acción a ejecutar (WALK, TURN_SR, TURN_SL).
+ * @param st Estado actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas.
+ * @return EstadoT Nuevo estado tras aplicar la acción.
+ */
+EstadoT applyT(Action accion, const EstadoT &st, const vector<vector<unsigned char>> &terreno, 
+               const vector<vector<unsigned char>> &altura){
+  EstadoT next = st;
+  switch(accion){
+    case WALK:
+      if (CasillaAccesibleTecnico(st, terreno, altura)){
+        next = NextCasillaTecnico(st);
+      }
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+
+  return next;
+}
+
+/**
+ * @brief Determina si un nodo está presente en una lista de nodos.
+ * @param st  Nodo a buscar.
+ * @param lista Lista de nodos donde se realiza la búsqueda.
+ * @return true si el nodo st se encuentra en la lista y false en caso contrario.
+ */
+bool Find(const NodoT &st, const list<NodoT> &lista) {
+  auto it = lista.begin();
+  while (it!=lista.end() and !((*it)==st)) {
+    it++;
+  }
+
+  return (it!=lista.end());
+}
+
+/**
+ * @brief Primera aproximación del algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ */
+list<Action> ComportamientoTecnico::B_Anchura(const EstadoT &inicio, const EstadoT &final, 
+                                              const vector<vector<unsigned char>> &terreno,
+                                              const vector<vector<unsigned char>> &altura) {
+  NodoT current_node;
+  list<NodoT> frontier;
+  list<NodoT> explored; 
+  list<Action> path;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c);
+  
+  while (!SolutionFound and !frontier.empty()) {
+    frontier.pop_front();
+    explored.push_back(current_node);
+
+    // Compruebo si estoy en una casilla que da las zapatillas
+    if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
+
+    // Genero el hijo resultante de aplicar la acción WALK
+    NodoT child_Walk = current_node;
+    child_Walk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    if (child_Walk.estado.site.f==final.site.f and child_Walk.estado.site.c==final.site.c) {
+      // El hijo generado es solución
+      child_Walk.secuencia.push_back(WALK);
+      current_node = child_Walk;
+      SolutionFound = true;
+    } else if (!Find(child_Walk, frontier) and !Find(child_Walk, explored)) {
+      // Se mete en la lista de frontier después de añadir la acción WALK a la secuencia
+      child_Walk.secuencia.push_back(WALK);
+      frontier.push_back(child_Walk);
+    }
+
+    if (!SolutionFound) {
+      // El hijo resultante de aplicar la acción TURN_SR
+      NodoT child_TurnSR = current_node;
+      child_TurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
+      if (!Find(child_TurnSR, frontier) and !Find(child_TurnSR, explored)) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SR a la secuencia
+        child_TurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(child_TurnSR);
+      }
+
+      // El hijo resultante de aplicar la acción TURN_SL
+      NodoT child_TurnSL = current_node;
+      child_TurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
+      if (!Find(child_TurnSL, frontier) and !Find(child_TurnSL, explored)) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SL a la secuencia
+        child_TurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(child_TurnSL);
+      }
+    }
+
+    // Paso a evaluar el siguient nodo en la lista frontier
+    if (!SolutionFound and !frontier.empty()) {
+      current_node = frontier.front();
+      SolutionFound = (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c);
+    }
+  }
+
+  // Devuelvo el camino encontrado
+  if (SolutionFound) path=current_node.secuencia;
+  return path;
+}
+
 /**
  * @brief Comportamiento del técnico para el Nivel Especial.
  * @param sensores Datos actuales de los sensores.
@@ -516,8 +553,20 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
   Action accion = IDLE;
 
   if (!hayPlan) {
-    plan = AvanzaASaltosDeCaballo();
-    hayPlan = true;
+    // Invocar al método de búsqueda
+    EstadoT inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+
+    // plan = AvanzaASaltosDeCaballo();
+    plan = B_Anchura(inicio, fin, mapaResultado, mapaCotas);
+    VisualizaPlan(inicio.site, plan);
+
+    hayPlan = (plan.size()!=0);
   }
 
   if (hayPlan and plan.size()>0) {

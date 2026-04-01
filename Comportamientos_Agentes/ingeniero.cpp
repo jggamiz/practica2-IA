@@ -47,7 +47,7 @@ Action ComportamientoIngeniero::think(Sensores sensores)
  * @return 'P' si no es accesible por altura y casilla en otro caso
  */
 char ViablePorAlturaI(char casilla, int dif, bool zap) {
-  if (abs(dif)<=1 or (zap && abs(dif)<=2)) return casilla;
+  if (abs(dif)<=1 or (zap and abs(dif)<=2)) return casilla;
   else return 'P';  
 }
 
@@ -199,10 +199,10 @@ int VeoCasillaExploracionI(char i, char c, char d) {
   int vd = ValoraTerrenoI(d);
 
   // Si estamos rodeados de obstáculos forzamos un giro
-  if (vi==0 && vc==0 && vd==0) return 0;
+  if (vi==0 and vc==0 and vd==0) return 0;
 
   // La prioridad máaxima es ir de frente si es igual o mejor que los lados
-  if (vc>=vi && vc>=vd && vc>0) return 2;
+  if (vc>=vi and vc>=vd and vc>0) return 2;
 
   // Si ir de frente es peor, elegimos el mejor de los lados
   if (vi>vd) return 1;
@@ -276,9 +276,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
         bool altura_ok = diff_altura < (tiene_zapatillas ? 3 : 2);
         
         // Si se cumplen todas las condiciones físicas, ¡saltamos!
-        // Opcional: Podrías añadir "&& ValoraTerrenoI(sensores.superficie[6]) >= 4" 
         // si solo quieres que salte cuando caiga en caminos o senderos para no gastar batería a lo tonto.
-        if (intermedio_libre && final_interesante && altura_ok) {
+        if (intermedio_libre and final_interesante and altura_ok) {
           accion = JUMP;
         } else {
           accion = WALK;
