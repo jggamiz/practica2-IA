@@ -14,7 +14,7 @@ struct EstadoT {
   bool zapatillas;
 
   bool operator==(const EstadoT &st) const {
-    return site==st.site && zapatillas==st.zapatillas;
+    return site==st.site and zapatillas==st.zapatillas;
   }
 };
 

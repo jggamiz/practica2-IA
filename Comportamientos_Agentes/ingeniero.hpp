@@ -10,6 +10,32 @@
 
 #include "comportamientos/comportamiento.hpp"
 
+
+struct EstadoI {
+  ubicacion site;
+  bool zapatillas;
+
+  bool operator==(const EstadoI &st) const {
+    return site==st.site and zapatillas==st.zapatillas;
+  }
+};
+
+struct NodoI {
+  EstadoI estado;
+  list<Action> secuencia;
+  int coste_tiempo; // Tiempo total acumulado para llegar a este nodo
+
+  bool operator==(const NodoI &node) const {
+    return estado==node.estado;
+  }
+
+  // priority_queue extrae el elemento MAYOR por defecto. Al usar '>' 
+  // la cola extrae siempre el nodo con el MENOR coste de tiempo
+  bool operator<(const NodoI &node) const {
+    return coste_tiempo>node.coste_tiempo;
+  }
+};
+
 class ComportamientoIngeniero : public Comportamiento {
 public:
   // =========================================================================

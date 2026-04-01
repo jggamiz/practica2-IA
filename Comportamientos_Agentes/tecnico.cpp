@@ -350,18 +350,6 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
 // --------------------------------------------------------------------------------
 // NIVEL ESPECIAL
 
-list<Action> AvanzaASaltosDeCaballo() {
-  list<Action> secuencia;
-
-  secuencia.push_back(WALK);
-  secuencia.push_back(WALK);
-  secuencia.push_back(TURN_SR);
-  secuencia.push_back(TURN_SR);
-  secuencia.push_back(WALK);
-
-  return secuencia;
-}
-
 // Funciones auxiliares
 
 /**
@@ -622,6 +610,19 @@ list<Action> ComportamientoTecnico::B_Anchura_V2(const EstadoT &inicio, const Es
   // Devuelvo el camino encontrado
   if (SolutionFound) path=current_node.secuencia;
   return path;
+}
+
+
+list<Action> AvanzaASaltosDeCaballo() {
+  list<Action> secuencia;
+
+  secuencia.push_back(WALK);
+  secuencia.push_back(WALK);
+  secuencia.push_back(TURN_SR);
+  secuencia.push_back(TURN_SR);
+  secuencia.push_back(WALK);
+
+  return secuencia;
 }
 
 /**
