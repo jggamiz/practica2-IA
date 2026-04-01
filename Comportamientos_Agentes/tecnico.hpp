@@ -25,6 +25,16 @@ struct NodoT {
   bool operator==(const NodoT &node) const {
     return estado==node.estado; // no importa el campo secuencia para que dos nodo sean iguales
   }
+
+  bool operator<(const NodoT &node) const {
+    if (estado.site.f<node.estado.site.f) return true;
+    else if (estado.site.f==node.estado.site.f and estado.site.c<node.estado.site.c) return true;
+    else if (estado.site.f==node.estado.site.f and estado.site.c==node.estado.site.c
+             and estado.site.brujula<node.estado.site.brujula) return true;
+    else if (estado.site.f==node.estado.site.f and estado.site.c==node.estado.site.c and
+             estado.site.brujula==node.estado.site.brujula and estado.zapatillas<node.estado.zapatillas) return true;
+    else return false;
+  }
 };
 
 // =========================================================================
@@ -160,6 +170,23 @@ list<Action> B_Anchura(const EstadoT &inicio, const EstadoT &final,
                        const vector<vector<unsigned char>> &terreno,
                        const vector<vector<unsigned char>> &altura
 );
+
+/**
+ * @brief Segunda aproximación del algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ * @note Explored pasa a ser implementado mediante un "set" en vez de un "list"
+ */
+list<Action> B_Anchura_V2(const EstadoT &inicio, const EstadoT &final, 
+                          const vector<vector<unsigned char>> &terreno,
+                          const vector<vector<unsigned char>> &altura
+); 
 
 protected:
   // =========================================================================

@@ -545,6 +545,86 @@ list<Action> ComportamientoTecnico::B_Anchura(const EstadoT &inicio, const Estad
 }
 
 /**
+ * @brief Segunda aproximación del algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ * @note Explored pasa a ser implementado mediante un "set" en vez de un "list"
+ */
+list<Action> ComportamientoTecnico::B_Anchura_V2(const EstadoT &inicio, const EstadoT &final, 
+                                              const vector<vector<unsigned char>> &terreno,
+                                              const vector<vector<unsigned char>> &altura) {
+  NodoT current_node;
+  list<NodoT> frontier;
+  set<NodoT> explored; 
+  list<Action> path;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c);
+  
+  while (!SolutionFound and !frontier.empty()) {
+    frontier.pop_front();
+    explored.insert(current_node);
+
+    // Compruebo si estoy en una casilla que da las zapatillas
+    if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
+
+    // Genero el hijo resultante de aplicar la acción WALK
+    NodoT child_Walk = current_node;
+    child_Walk.estado = applyT(WALK, current_node.estado, terreno, altura);
+    if (child_Walk.estado.site.f==final.site.f and child_Walk.estado.site.c==final.site.c) {
+      // El hijo generado es solución
+      child_Walk.secuencia.push_back(WALK);
+      current_node = child_Walk;
+      SolutionFound = true;
+    } else if (explored.find(child_Walk)==explored.end()) {
+      // Se mete en la lista de frontier después de añadir la acción WALK a la secuencia
+      child_Walk.secuencia.push_back(WALK);
+      frontier.push_back(child_Walk);
+    }
+
+    if (!SolutionFound) {
+      // El hijo resultante de aplicar la acción TURN_SR
+      NodoT child_TurnSR = current_node;
+      child_TurnSR.estado = applyT(TURN_SR, current_node.estado, terreno, altura);
+      if (explored.find(child_TurnSR)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SR a la secuencia
+        child_TurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(child_TurnSR);
+      }
+
+      // El hijo resultante de aplicar la acción TURN_SL
+      NodoT child_TurnSL = current_node;
+      child_TurnSL.estado = applyT(TURN_SL, current_node.estado, terreno, altura);
+      if (explored.find(child_TurnSL)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SL a la secuencia
+        child_TurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(child_TurnSL);
+      }
+    }
+
+    // Paso a evaluar el siguient nodo en la lista frontier
+    if (!SolutionFound and !frontier.empty()) {
+      current_node = frontier.front();
+      while (explored.find(current_node)!=explored.end() and !frontier.empty()) {
+        frontier.pop_front();
+        current_node = frontier.front();
+      }
+    }
+  }
+
+  // Devuelvo el camino encontrado
+  if (SolutionFound) path=current_node.secuencia;
+  return path;
+}
+
+/**
  * @brief Comportamiento del técnico para el Nivel Especial.
  * @param sensores Datos actuales de los sensores.
  * @return Acción a realizar.
@@ -563,7 +643,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
     fin.site.c = sensores.BelPosC;
 
     // plan = AvanzaASaltosDeCaballo();
-    plan = B_Anchura(inicio, fin, mapaResultado, mapaCotas);
+    // plan = B_Anchura(inicio, fin, mapaResultado, mapaCotas);
+    plan = B_Anchura_V2(inicio, fin, mapaResultado, mapaCotas);
     VisualizaPlan(inicio.site, plan);
 
     hayPlan = (plan.size()!=0);
