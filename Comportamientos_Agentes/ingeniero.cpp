@@ -292,7 +292,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
       break;
     default:
       // Si nos hemos metido en un rincón donde ni recto ni diagonales son transitables,
-      // forzamos un giro de 90º para darnos la vuelta poco a poco.
+      // forzamos un giro de 90º para darnos la vuelta poco a poco
       accion = TURN_SL;
       // giro45Izq = 1; 
       break;
@@ -365,10 +365,171 @@ EstadoI NextCasillaIngeniero(const EstadoI &st) {
 bool CasillaAccesibleIngeniero(const EstadoI &st, Action accion, const vector<vector<unsigned char>> &terreno,
                              const vector<vector<unsigned char>> &altura) {
   EstadoI next = NextCasillaIngeniero(st);
+  int max_diff = st.zapatillas ? 2 : 1;
 
+  // Si la acción es WALK
+  if (accion==WALK) {
+    char terr = terreno[next.site.f][next.site.c];
+    if (terr=='M' or terr=='P' or terr=='B') return false; // intransitables
 
+    int diff = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]);
 
+    return diff <= max_diff;
+  }
+
+  // Si la acción es JUMP
+  if (accion==JUMP) {
+    // Comprobamos casilla intermedia
+    char terr_mid = terreno[next.site.f][next.site.c]; // El terreno del medio
+    if (terr_mid=='M' or terr_mid=='P' or terr_mid=='B') return false; // intransitables
+    // cómo meto aquí para comprobar que no haya un agente en la casilla del medio si no tenco acceso a sensores?
+
+    // Comprobamos casilla final
+    EstadoI final_jump = NextCasillaIngeniero(next);
+    char terr_fin = terreno[final_jump.site.f][final_jump.site.c];
+    if (terr_fin=='M' or terr_fin=='P' or terr_fin=='B') return false; // intransitables
+    
+    // Comprobamos la altura entre la casilla final y la inicial (la del medio da igual (????))
+    int diff = abs(altura[st.site.f][st.site.c]-altura[final_jump.site.f][final_jump.site.c]);
+    return diff <= max_diff;
+  }
+
+  return false;
 }
+
+/**
+ * @brief Aplica una acción sobre un estado.
+ * @param accion Acción a ejecutar (WALK, JUMP, TURN_SR, TURN_SL).
+ * @param st Estado actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas.
+ * @return EstadoI Nuevo estado tras aplicar la acción.
+ */
+EstadoI applyI(Action accion, const EstadoI &st, const vector<vector<unsigned char>> &terreno, 
+               const vector<vector<unsigned char>> &altura){
+  EstadoI next = st;
+  switch (accion) {
+    case WALK:
+      if (CasillaAccesibleIngeniero(st, WALK, terreno, altura))
+        next = NextCasillaIngeniero(st);
+      break;
+    case JUMP:
+      if (CasillaAccesibleIngeniero(st, JUMP, terreno, altura))
+        next = NextCasillaIngeniero(NextCasillaIngeniero(st));
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+  
+  // Actualizar si recoge zapatillas
+  if (terreno[next.site.f][next.site.c] == 'D')
+      next.zapatillas = true;
+
+  return next;
+}
+
+/**
+ * @brief Algoritmo de búsqueda en anchura
+ * 
+ * @param inicio Estado inicial de la búsqueda
+ * @param final Estado final de la búsqueda
+ * @param terreno Matriz que contiene la información del terreno
+ * @param altura Matriz que contiene las alturas del mapa
+ * 
+ * @return La secuencia de acciones para llegar al estado final
+ * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+ */
+list<Action> ComportamientoIngeniero::B_Anchura_Nivel2(const EstadoI &inicio, const EstadoI &final, 
+                                              const vector<vector<unsigned char>> &terreno,
+                                              const vector<vector<unsigned char>> &altura) {
+  NodoI current_node;
+  list<NodoI> frontier;
+  set<NodoI> explored;
+  list<Action> path;
+
+  current_node.estado = inicio;
+  frontier.push_back(current_node);
+  bool SolutionFound = (current_node.estado.site.f == final.site.f and current_node.estado.site.c == final.site.c);
+
+  while(!SolutionFound and !frontier.empty()) {
+    frontier.pop_front();
+    explored.insert(current_node);
+
+    // Compruebo si estoy en una casilla que da las zapatillas YA HECHO EN applyI
+    // if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
+
+    // Genero el hijo resultante de aplicar la acción WALK
+    NodoI child_Walk = current_node;
+    child_Walk.estado = applyI(WALK, current_node.estado, terreno, altura);
+    // Solamente si el estado ha cambiado (es decir, si el movimiento fue válido)
+    if (!(child_Walk.estado==current_node.estado)) {
+      if (child_Walk.estado.site.f==final.site.f and child_Walk.estado.site.c==final.site.c) {
+        // El hijo generado es solución
+        child_Walk.secuencia.push_back(WALK);
+        current_node = child_Walk;
+        SolutionFound = true;
+      } else if (explored.find(child_Walk)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción WALK a la secuencia
+        child_Walk.secuencia.push_back(WALK);
+        frontier.push_back(child_Walk);
+      }
+    }
+
+    // Genero el hijo resultante de aplicar la acción JUMP
+    NodoI child_Jump = current_node;
+    child_Jump.estado = applyI(JUMP, current_node.estado, terreno, altura);
+    // Solamente si el estado ha cambiado (es decir, si el movimiento fue válido)
+    if (!(child_Jump.estado==current_node.estado)) {
+      if (child_Jump.estado.site.f==final.site.f and child_Jump.estado.site.c==final.site.c) {
+        // El hijo generado es solución
+        child_Jump.secuencia.push_back(JUMP);
+        current_node = child_Jump;
+        SolutionFound = true;
+      } else if (explored.find(child_Jump)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción JUMP a la secuencia
+        child_Jump.secuencia.push_back(JUMP);
+        frontier.push_back(child_Jump);
+      }
+    }
+    
+    if (!SolutionFound) {
+      // El hijo resultante de aplicar la acción TURN_SR
+      NodoI child_TurnSR = current_node;
+      child_TurnSR.estado = applyI(TURN_SR, current_node.estado, terreno, altura);
+      if (explored.find(child_TurnSR)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SR a la secuencia
+        child_TurnSR.secuencia.push_back(TURN_SR);
+        frontier.push_back(child_TurnSR);
+      }
+
+      // El hijo resultante de aplicar la acción TURN_SL
+      NodoI child_TurnSL = current_node;
+      child_TurnSL.estado = applyI(TURN_SL, current_node.estado, terreno, altura);
+      if (explored.find(child_TurnSL)==explored.end()) {
+        // Se mete en la lista de frontier después de añadir la acción TURN_SL a la secuencia
+        child_TurnSL.secuencia.push_back(TURN_SL);
+        frontier.push_back(child_TurnSL);
+      }
+    }
+
+    // Evaluamos el siguiente nodo en la frontera, saltando los ya explorados
+    if (!SolutionFound and !frontier.empty()) {
+      current_node = frontier.front();
+      while (explored.find(current_node)!=explored.end() and !frontier.empty()) {
+        frontier.pop_front();
+        if (!frontier.empty()) current_node = frontier.front();
+      }
+    }
+  }
+
+  if (SolutionFound) path = current_node.secuencia;
+  return path;
+}
+
 
 /**
  * @brief Comportamiento del ingeniero para el Nivel 2 (búsqueda).
@@ -377,8 +538,41 @@ bool CasillaAccesibleIngeniero(const EstadoI &st, Action accion, const vector<ve
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores)
 {
-  // TODO: Implementar búsqueda para el Nivel 2.
-  return IDLE;
+  Action accion = IDLE;
+
+  if (!hayPlan) {
+    // Invocamos al método de búsqueda
+    EstadoI inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+
+    plan = B_Anchura_Nivel2(inicio, fin, mapaResultado, mapaCotas);
+    VisualizaPlan(inicio.site, plan);
+
+    hayPlan = (plan.size()!=0);
+  }
+
+  if (hayPlan and plan.size()>0) {
+    Action next_accion = plan.front();
+    
+    if (next_accion == WALK and sensores.agentes[2]!='_')
+        return IDLE; // El técnico está justo delante, esperamos a que se quite
+    
+    if (next_accion == JUMP and (sensores.agentes[2]!='_' or sensores.agentes[6]!='_'))
+        return IDLE; // El técnico está en medio o en el destino, esperamos a que se quite
+
+    // Si todo está despejado, ejecutamos la acción y la quitamos del plan
+    accion = next_accion;
+    plan.pop_front();
+  }
+
+  if (plan.size()==0) hayPlan = false;
+
+  return accion;
 }
 // --------------------------------------------------------------------------------
 

@@ -286,7 +286,33 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+
+  // Buscamos si el ingeniero está en el campo de visión del técnico
+  bool veo_ingeniero = false;
+  for (int i=1; i<sensores.agentes.size(); i++) {
+    if (sensores.agentes[i]=='i') {
+      veo_ingeniero = true;
+      break;
+    }
+  }
+
+  if (veo_ingeniero) { // Si lo detecta, apartamos al técnico
+    // Comprobamos si podemos avanzar de frente
+    char sup_frente = sensores.superficie[2];
+
+    // PUEDO RECUPERAR AQUÍ LA FUNCION CasillaAccesibleTecnico???
+    bool check1 = (sup_frente!='M' and sup_frente!='P');
+    bool check2 = sup_frente!='B' or (sup_frente=='B' and tiene_zapatillas);
+    bool check3 = abs(sensores.cota[0]-sensores.cota[2]) <= 1;
+    if (check1 and check2 and check3)  accion = WALK; // Cuando ir de frente es seguro
+    else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
+                                                          // siguiente turno   
+  } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
+    return IDLE;
+  } */
+
+  return accion;
 }
 // --------------------------------------------------------------------------------
 
@@ -426,9 +452,8 @@ EstadoT applyT(Action accion, const EstadoT &st, const vector<vector<unsigned ch
   EstadoT next = st;
   switch(accion){
     case WALK:
-      if (CasillaAccesibleTecnico(st, terreno, altura)){
+      if (CasillaAccesibleTecnico(st, terreno, altura))
         next = NextCasillaTecnico(st);
-      }
       break;
     case TURN_SR:
       next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
@@ -437,6 +462,10 @@ EstadoT applyT(Action accion, const EstadoT &st, const vector<vector<unsigned ch
       next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
       break;
   }
+
+  // Actualizar si recoge zapatillas
+  if (terreno[next.site.f][next.site.c] == 'D')
+      next.zapatillas = true;
 
   return next;
 }
@@ -560,8 +589,8 @@ list<Action> ComportamientoTecnico::B_Anchura_V2(const EstadoT &inicio, const Es
     frontier.pop_front();
     explored.insert(current_node);
 
-    // Compruebo si estoy en una casilla que da las zapatillas
-    if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
+    // Compruebo si estoy en una casilla que da las zapatillas YA HECHO EN applyT
+    // if (terreno[current_node.estado.site.f][current_node.estado.site.c]=='D') current_node.estado.zapatillas = true;
 
     // Genero el hijo resultante de aplicar la acción WALK
     NodoT child_Walk = current_node;
@@ -597,12 +626,12 @@ list<Action> ComportamientoTecnico::B_Anchura_V2(const EstadoT &inicio, const Es
       }
     }
 
-    // Paso a evaluar el siguient nodo en la lista frontier
+    // Paso a evaluar el siguiente nodo en la lista frontier
     if (!SolutionFound and !frontier.empty()) {
       current_node = frontier.front();
       while (explored.find(current_node)!=explored.end() and !frontier.empty()) {
         frontier.pop_front();
-        current_node = frontier.front();
+        if (!frontier.empty()) current_node = frontier.front();
       }
     }
   }

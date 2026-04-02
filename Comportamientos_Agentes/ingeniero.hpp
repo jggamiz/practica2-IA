@@ -73,6 +73,8 @@ public:
                          std::vector<std::vector<unsigned char>> mapaC): 
                          Comportamiento(mapaR, mapaC) {
     // Inicializar Variables de Estado
+    hayPlan = false;
+    tiene_zapatillas = false;
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -147,6 +149,22 @@ public:
    * @return Acción a realizar.
    */
   Action ComportamientoIngenieroNivel_6(Sensores sensores);
+
+  /**
+   * @brief Algoritmo de búsqueda en anchura
+   * 
+   * @param inicio Estado inicial de la búsqueda
+   * @param final Estado final de la búsqueda
+   * @param terreno Matriz que contiene la información del terreno
+   * @param altura Matriz que contiene las alturas del mapa
+   * 
+   * @return La secuencia de acciones para llegar al estado final
+   * @note Devuelve un plan vacío si no es posible encontrar un plan válido
+   */
+  list<Action> B_Anchura_Nivel2(const EstadoI &inicio, const EstadoI &final, 
+                                const vector<vector<unsigned char>> &terreno,
+                                const vector<vector<unsigned char>> &altura
+  );
 
 protected:
   // =========================================================================
@@ -227,6 +245,8 @@ Action last_action;     // Almacena la última acción realizada
 bool tiene_zapatillas;  // Indica si el agente tiene las zapatillas
 int giro45Izq;          // Indica el número de giros a la izqiuerda que quedan por dar
 
+bool hayPlan;            // Indica si hay una plan que ejecutar
+list<Action> plan;       // Almacena el plan a realizar.
 };
 
 #endif
