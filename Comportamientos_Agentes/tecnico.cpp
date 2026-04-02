@@ -305,7 +305,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
     bool check1 = (sup_frente!='M' and sup_frente!='P');
     bool check2 = sup_frente!='B' or (sup_frente=='B' and tiene_zapatillas);
     bool check3 = abs(sensores.cota[0]-sensores.cota[2]) <= 1;
-    if (check1 and check2 and check3)  accion = WALK; // Cuando ir de frente es seguro
+    // bool check3= EsAccesiblePorAltura(sensores.) // COMO USO ESTO???
+    if (check1 and check2 and check3)  accion = WALK;     // Cuando ir de frente es seguro
     else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
                                                           // siguiente turno   
   } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
@@ -326,7 +327,9 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
-  return IDLE;
+  Action accion = IDLE;
+  
+  return accion;
 }
 // --------------------------------------------------------------------------------
 
