@@ -30,12 +30,128 @@ Action ComportamientoTecnico::think(Sensores sensores) {
   return accion;
 }
 
+// --------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+// FUNCIONES AUXILIARES
 
+/**
+ * @brief Calcula el estado resultante al avanzar una casilla en la dirección actual
+ * @param st Estado actual del agente (ubicación y orientación).
+ * @return Nuevo estado con la posición avanzada una casilla en la misma orientación.
+ */
+EstadoT NextCasillaTecnico(const EstadoT &st) {
+  EstadoT next = st;
+
+  switch(st.site.brujula) {
+    case norte:
+      next.site.f = st.site.f-1;
+      break;
+    case noreste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c+1;
+      break;
+    case este:
+      next.site.c = st.site.c+1;
+      break;
+    case sureste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c+1;
+      break;
+    case sur:
+      next.site.f = st.site.f+1;
+      break;
+    case suroeste:
+      next.site.f = st.site.f+1;
+      next.site.c = st.site.c-1;
+      break;
+    case oeste:
+      next.site.c = st.site.c-1;
+      break;
+    case noroeste:
+      next.site.f = st.site.f-1;
+      next.site.c = st.site.c-1;
+      break; 
+  }
+
+  return next;
+}
+
+/**
+ * @brief Comprueba si la casilla situada delante del agente es transitable, 
+ *        considerando el terreno y la diferencia de altura.
+ * @param st Estado actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas (alturas).
+ * @return true si la casilla de delante y false en caso contrario.
+ */
+bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
+                             const vector<vector<unsigned char>> &altura) {
+  EstadoT next = NextCasillaTecnico(st);
+  bool check1 = false, check2=false, check3=false;
+  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
+  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]=='B' and st.zapatillas);
+  check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
+  
+  return check1 and check2 and check3;
+}
+
+/**
+ * @brief Aplica una acción sobre un estado.
+ * @param accion Acción a ejecutar (WALK, TURN_SR, TURN_SL).
+ * @param st Estado actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas.
+ * @return EstadoT Nuevo estado tras aplicar la acción.
+ */
+EstadoT applyT(Action accion, const EstadoT &st, const vector<vector<unsigned char>> &terreno, 
+               const vector<vector<unsigned char>> &altura){
+  EstadoT next = st;
+  switch(accion){
+    case WALK:
+      if (CasillaAccesibleTecnico(st, terreno, altura))
+        next = NextCasillaTecnico(st);
+      break;
+    case TURN_SR:
+      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
+      break;
+    case TURN_SL:
+      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
+      break;
+  }
+
+  // Actualizar si recoge zapatillas
+  if (terreno[next.site.f][next.site.c] == 'D')
+      next.zapatillas = true;
+
+  return next;
+}
+
+/**
+ * @brief Determina si un nodo está presente en una lista de nodos.
+ * @param st  Nodo a buscar.
+ * @param lista Lista de nodos donde se realiza la búsqueda.
+ * @return true si el nodo st se encuentra en la lista y false en caso contrario.
+ */
+bool Find(const NodoT &st, const list<NodoT> &lista) {
+  auto it = lista.begin();
+  while (it!=lista.end() and !((*it)==st)) {
+    it++;
+  }
+
+  return (it!=lista.end());
+}
+
+// --------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 // Niveles iniciales (Comportamientos reactivos simples)
 // --------------------------------------------------------------------------------
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 0
 
@@ -135,8 +251,10 @@ bool ComportamientoTecnico::es_camino(unsigned char c) const {
   return (c == 'C' || c == 'D' || c == 'U');
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 1
 
@@ -275,8 +393,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
   return accion;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 2
 
@@ -316,10 +436,118 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
   return accion;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 3
+
+/**
+ * @brief Calcula la heurística para el algoritmo A* usando distancia de Chebyshev.
+ * 
+ * Al ser el coste mínimo de moverse 1, esta heurística es siempre admisible (nunca 
+ * sobreestima el coste real, siempre da un valor \leq que el coste real)
+ * 
+ * @param actual Estado actual del nodo que estamos evaluando.
+ * @param final Estado objetivo al que queremos llegar.
+ * @return Distancia de Chebyshev entre las posiciones 
+ */
+int Heuristica(const EstadoT &actual, const EstadoT &final) {
+  // Calculamos la distancia máxima entre filas o columnas
+  int diff_f = abs(actual.site.f-final.site.f);
+  int diff_c = abs(actual.site.c-final.site.c);
+
+  return max(diff_f, diff_c);
+}
+
+/**
+ * @brief Calcula el consumo de energía del técnico para realizar cada acción según el terreno y 
+ * la diferencia de altura.
+ * 
+ * @param accion Acción a realizar (WALK, TURN_SR, TURN_SL).
+ * @param terreno_origen Carácter que representa el terreno de origen.
+ * @param cota_origen Altura de la casilla actual.
+ * @param cota_destino Altura de la casilla final.
+ * @return int Consumo total de la acción (mínimo 1).
+ */
+int CalcularConsumoTecnico(Action accion, char terreno_origen, int cota_actual, int cota_final) {
+  int consumo = 0;
+  int extra_altura = 0;
+  int diff_altura = cota_actual - cota_final;
+
+  switch (accion) {
+    case WALK:
+      if (terreno_origen=='A') {
+        consumo = 60;
+        if (diff_altura > 0) extra_altura = 5;
+        else if (diff_altura < 0) extra_altura = -2;
+        else extra_altura = 0;
+      } else if (terreno_origen=='H') {
+        consumo = 6;
+        if (diff_altura > 0) extra_altura = 5;
+        else if (diff_altura < 0) extra_altura = -2;
+        else extra_altura = 0;
+      } else if (terreno_origen=='S') {
+        consumo = 3;
+        if (diff_altura > 0) extra_altura = 5;
+        else if (diff_altura < 0) extra_altura = -2;
+        else extra_altura = 0;
+      } else consumo = 1;
+      break;
+    case TURN_SR: case TURN_SL:
+      if (terreno_origen=='A') consumo = 5;
+      else if (terreno_origen=='H') consumo = 2;
+      else consumo = 1;
+      break;
+  }
+
+  int consumo_total = consumo + extra_altura;
+  return (consumo_total>0) ? consumo_total : 1;
+}
+
+/**
+ * @brief Aplica una acción sobre un estado, actualizando el valor de coste_g.
+ * @param accion Acción a ejecutar (WALK, TURN_SR, TURN_SL).
+ * @param node Nodo actual del agente.
+ * @param terreno Matriz de tipos de terreno.
+ * @param altura Matriz de cotas.
+ * @return NodoT Nuevo nodo tras aplicar la acción.
+ */
+NodoT applyT_AStar(Action accion, const NodoT &node, const vector<vector<unsigned char>> &terreno, 
+                   const vector<vector<unsigned char>> &altura){
+  NodoT next = node;
+  char terreno_actual = terreno[node.estado.site.f][node.estado.site.c];
+  int cota_actual = altura[node.estado.site.f][node.estado.site.c];
+
+  switch(accion){
+    case WALK:
+      if (CasillaAccesibleTecnico(node.estado, terreno, altura)) {
+        next.estado = NextCasillaTecnico(node.estado);
+        int cota_next = altura[next.estado.site.f][next.estado.site.c];
+        next.coste_g += CalcularConsumoTecnico(WALK, terreno_actual, cota_actual, cota_next);
+        next.secuencia.push_back(WALK);
+      }
+      break;
+    case TURN_SR:
+      next.estado.site.brujula = (Orientacion) ((next.estado.site.brujula+1)%8);
+      next.coste_g += CalcularConsumoTecnico(TURN_SR, terreno_actual, cota_actual, cota_actual);
+      next.secuencia.push_back(TURN_SR);
+      break;
+    case TURN_SL:
+      next.estado.site.brujula = (Orientacion) ((next.estado.site.brujula+7)%8);
+      next.coste_g += CalcularConsumoTecnico(TURN_SL, terreno_actual, cota_actual, cota_actual);
+      next.secuencia.push_back(TURN_SL);
+      break;
+  }
+
+  // Actualizar si recoge zapatillas
+  if (terreno[next.estado.site.f][next.estado.site.c] == 'D')
+      next.estado.zapatillas = true;
+
+  return next;
+}
+
 
 /**
  * @brief Comportamiento del técnico para el Nivel 3.
@@ -332,8 +560,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
   return accion;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 4
 
@@ -346,8 +576,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
   return IDLE;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 5
 
@@ -360,8 +592,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
   return IDLE;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 6
 
@@ -374,119 +608,12 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
   return IDLE;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
+// ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL ESPECIAL
-
-// Funciones auxiliares
-
-/**
- * @brief Calcula el estado resultante al avanzar una casilla en la dirección actual
- * @param st Estado actual del agente (ubicación y orientación).
- * @return Nuevo estado con la posición avanzada una casilla en la misma orientación.
- */
-EstadoT NextCasillaTecnico(const EstadoT &st) {
-  EstadoT next = st;
-
-  switch(st.site.brujula) {
-    case norte:
-      next.site.f = st.site.f-1;
-      break;
-    case noreste:
-      next.site.f = st.site.f-1;
-      next.site.c = st.site.c+1;
-      break;
-    case este:
-      next.site.c = st.site.c+1;
-      break;
-    case sureste:
-      next.site.f = st.site.f+1;
-      next.site.c = st.site.c+1;
-      break;
-    case sur:
-      next.site.f = st.site.f+1;
-      break;
-    case suroeste:
-      next.site.f = st.site.f+1;
-      next.site.c = st.site.c-1;
-      break;
-    case oeste:
-      next.site.c = st.site.c-1;
-      break;
-    case noroeste:
-      next.site.f = st.site.f-1;
-      next.site.c = st.site.c-1;
-      break; 
-  }
-
-  return next;
-}
-
-/**
- * @brief Comprueba si la casilla situada delante del agente es transitable, 
- *        considerando el terreno y la diferencia de altura.
- * @param st Estado actual del agente.
- * @param terreno Matriz de tipos de terreno.
- * @param altura Matriz de cotas (alturas).
- * @return true si la casilla de delante y false en caso contrario.
- */
-bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
-                             const vector<vector<unsigned char>> &altura) {
-  EstadoT next = NextCasillaTecnico(st);
-  bool check1 = false, check2=false, check3=false;
-  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
-  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]=='B' and st.zapatillas);
-  check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
-  
-  return check1 and check2 and check3;
-}
-
-/**
- * @brief Aplica una acción sobre un estado.
- * @param accion Acción a ejecutar (WALK, TURN_SR, TURN_SL).
- * @param st Estado actual del agente.
- * @param terreno Matriz de tipos de terreno.
- * @param altura Matriz de cotas.
- * @return EstadoT Nuevo estado tras aplicar la acción.
- */
-EstadoT applyT(Action accion, const EstadoT &st, const vector<vector<unsigned char>> &terreno, 
-               const vector<vector<unsigned char>> &altura){
-  EstadoT next = st;
-  switch(accion){
-    case WALK:
-      if (CasillaAccesibleTecnico(st, terreno, altura))
-        next = NextCasillaTecnico(st);
-      break;
-    case TURN_SR:
-      next.site.brujula = (Orientacion) ((next.site.brujula+1)%8);
-      break;
-    case TURN_SL:
-      next.site.brujula = (Orientacion) ((next.site.brujula+7)%8);
-      break;
-  }
-
-  // Actualizar si recoge zapatillas
-  if (terreno[next.site.f][next.site.c] == 'D')
-      next.zapatillas = true;
-
-  return next;
-}
-
-/**
- * @brief Determina si un nodo está presente en una lista de nodos.
- * @param st  Nodo a buscar.
- * @param lista Lista de nodos donde se realiza la búsqueda.
- * @return true si el nodo st se encuentra en la lista y false en caso contrario.
- */
-bool Find(const NodoT &st, const list<NodoT> &lista) {
-  auto it = lista.begin();
-  while (it!=lista.end() and !((*it)==st)) {
-    it++;
-  }
-
-  return (it!=lista.end());
-}
 
 /**
  * @brief Primera aproximación del algoritmo de búsqueda en anchura
@@ -693,6 +820,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_E(Sensores sensores) {
   return accion;
 }
 // --------------------------------------------------------------------------------
+// ================================================================================
 
 
 // =========================================================================

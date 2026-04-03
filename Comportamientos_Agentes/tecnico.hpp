@@ -16,16 +16,43 @@ struct EstadoT {
   bool operator==(const EstadoT &st) const {
     return site==st.site and zapatillas==st.zapatillas;
   }
+
+  bool operator<(const EstadoT &st) const {
+    if (site.f < st.site.f) return true;
+    if (site.f == st.site.f and site.c < st.site.c) return true;
+    if (site.f == st.site.f and site.c == st.site.c and site.brujula < st.site.brujula) return true;
+    if (site.f == st.site.f and site.c == st.site.c and 
+        site.brujula == st.site.brujula and zapatillas<st.zapatillas) return true;
+    return false;
+  }
 };
 
 struct NodoT {
   EstadoT estado;
   list<Action> secuencia;
 
+  // Costes para el A*
+  int coste_g;  // Coste real acumulado (energía gastada hasta llegar a este nodo)
+  int coste_h;  // Heurística (energía estimada que hay qye gastar para llegar a destino)
+  int coste_f;  // g + h (coste total estimado)
+
   bool operator==(const NodoT &node) const {
     return estado==node.estado; // no importa el campo secuencia para que dos nodo sean iguales
   }
 
+  // Orden para la priority queue
+  bool operator<(const NodoT &node) const {
+    // priority_queue extrae el elemento MAYOR por defecto. Al usar '>' la cola extraerá siempre 
+    // el nodo con el MENOR coste de tiempo (es decir que estamos simulando una min-heap)
+    if (coste_f>node.coste_f) return true;
+
+    // En caso de que tengan mismo coste total, es mejor el nodo que haya avanzado más (mayor g)
+    if (coste_f==node.coste_f and coste_g<node.coste_g) return true;
+
+    return false;
+  }
+
+  /*
   bool operator<(const NodoT &node) const {
     if (estado.site.f<node.estado.site.f) return true;
     else if (estado.site.f==node.estado.site.f and estado.site.c<node.estado.site.c) return true;
@@ -35,6 +62,7 @@ struct NodoT {
              estado.site.brujula==node.estado.site.brujula and estado.zapatillas<node.estado.zapatillas) return true;
     else return false;
   }
+  */
 };
 
 // =========================================================================
