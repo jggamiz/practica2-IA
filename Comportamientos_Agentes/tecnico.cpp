@@ -429,7 +429,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
     // bool check3= EsAccesiblePorAltura(sensores.) // COMO USO ESTO???
     if (check1 and check2 and check3)  accion = WALK;     // Cuando ir de frente es seguro
     else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
-                                                          // siguiente turno   
+                                                          // el siguiente turno   
   } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
     return IDLE;
   } */
@@ -551,8 +551,7 @@ NodoT applyT_AStar(Action accion, const NodoT &node, const vector<vector<unsigne
 
 list<Action> ComportamientoTecnico::A_Star(const EstadoT &inicio, const EstadoT &final, 
                                            const vector<vector<unsigned char>> &terreno,
-                                           const vector<vector<unsigned char>> &altura) 
-{
+                                           const vector<vector<unsigned char>> &altura) {
   NodoT current_node;
   priority_queue<NodoT> frontier; // Definimos la cola de prioridad (min-heap)
   map<EstadoT, int> explored; // Mapa de explorados (estado, mejor coste g encontrado)
@@ -612,7 +611,35 @@ list<Action> ComportamientoTecnico::A_Star(const EstadoT &inicio, const EstadoT 
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_3(Sensores sensores) {
   Action accion = IDLE;
-  
+  if (!hayPlan) {
+    // Invocamos al método de búsqueda (A*)
+    EstadoT inicio, fin;
+    inicio.site.f = sensores.posF;
+    inicio.site.c = sensores.posC;
+    inicio.site.brujula = sensores.rumbo;
+    inicio.zapatillas = tiene_zapatillas;
+    fin.site.f = sensores.BelPosF;
+    fin.site.c = sensores.BelPosC;
+
+    plan = A_Star(inicio, fin, mapaResultado, mapaCotas);
+    VisualizaPlan(inicio.site, plan);
+
+    hayPlan = (plan.size()!=0);
+  }
+
+  if (hayPlan and plan.size()>0) {
+    Action next_accion = plan.front();
+    
+    if (next_accion == WALK and sensores.agentes[2]!='_')
+        return IDLE; // El ingeniero está justo delante, esperamos a que se quite
+    
+    // Si todo está despejado, ejecutamos la acción y la quitamos del plan
+    accion = next_accion;
+    plan.pop_front();
+  }
+
+  if (plan.size()==0) hayPlan = false;
+
   return accion;
 }
 // --------------------------------------------------------------------------------

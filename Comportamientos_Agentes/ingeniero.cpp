@@ -590,7 +590,28 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_2(Sensores sensores
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores)
 {
   Action accion = IDLE;
-  
+
+  // Buscamos si el técnico está en el campo de visión del ingeniero
+  bool veo_tecnico = false;
+  for (int i=1; i<sensores.agentes.size(); i++) {
+    if (sensores.agentes[i]=='t') {
+      veo_tecnico = true;
+      break;
+    }
+  }
+
+  if (veo_tecnico) { // Si lo detecta, apartamos al ingeniero
+    // Comprobamos si podemos avanzar de frente
+    char sup_frente = sensores.superficie[2];
+    bool check1 = (sup_frente != 'M' and sup_frente != 'P' and sensores.agentes[2] == '_');
+    // bool check2 = EsAccesiblePorAltura(,tiene_zapatillas);
+    if (check1 and true) accion = WALK; // Cuando ir de frente es seguro
+    else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
+                                                          // el siguiente turno   
+  } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
+    return IDLE;
+  } */
+
   return accion;
 }
 // --------------------------------------------------------------------------------
