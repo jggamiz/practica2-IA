@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <map>
 #include <cstdlib>
 
 using namespace std;
@@ -507,7 +508,7 @@ int CalcularConsumoTecnico(Action accion, char terreno_origen, int cota_actual, 
 }
 
 /**
- * @brief Aplica una acción sobre un estado, actualizando el valor de coste_g.
+ * @brief Aplica una acción sobre un nodo, actualizando el valor de coste_g y la secuencia.
  * @param accion Acción a ejecutar (WALK, TURN_SR, TURN_SL).
  * @param node Nodo actual del agente.
  * @param terreno Matriz de tipos de terreno.
@@ -546,6 +547,61 @@ NodoT applyT_AStar(Action accion, const NodoT &node, const vector<vector<unsigne
       next.estado.zapatillas = true;
 
   return next;
+}
+
+list<Action> ComportamientoTecnico::A_Star(const EstadoT &inicio, const EstadoT &final, 
+                                           const vector<vector<unsigned char>> &terreno,
+                                           const vector<vector<unsigned char>> &altura) 
+{
+  NodoT current_node;
+  priority_queue<NodoT> frontier; // Definimos la cola de prioridad (min-heap)
+  map<EstadoT, int> explored; // Mapa de explorados (estado, mejor coste g encontrado)
+  list<Action> path;
+
+  current_node.estado = inicio;
+  current_node.coste_g = 0;
+  current_node.coste_h = Heuristica(inicio, final);
+  current_node.coste_f = current_node.coste_g + current_node.coste_h;
+
+  frontier.push(current_node);
+
+  while (!frontier.empty()) {
+    // Extraemos el "mejor" nodo
+    current_node = frontier.top();
+    frontier.pop();
+
+    // Condición de finalización (al extraer, no al generar)
+    if (current_node.estado.site.f==final.site.c and current_node.estado.site.c==final.site.c) {
+      path = current_node.secuencia;
+      return path;
+    }
+
+    // Verificamos si ese estado ya lo hemos visitado con un coste menor o igual
+    auto it = explored.find(current_node.estado);
+    if (it!=explored.end() and it->second<=current_node.coste_g)
+      continue; // Ya encontramos un camino mejor a este estado, luego lo ignoramos
+    
+    // Lo registramos con su nuevo coste mínimo
+    explored[current_node.estado] = current_node.coste_g;
+
+    // Generamos hijos
+    Action acciones[] = {WALK, TURN_SR, TURN_SL};
+    for (int i=0; i<3; i++) {
+      NodoT child = applyT_AStar(acciones[i], current_node, terreno, altura);
+      // Solamente si el estado ha cambiado (es decir, si el movimiento fue válido)
+      if (!(child.estado == current_node.estado)) {
+        child.coste_h = Heuristica(child.estado, final);
+        child.coste_f = child.coste_g + child.coste_h;
+        
+        // Solo lo metemos en frontier si no o habíamos explorado o hallado un atajo de coste
+        auto it_child = explored.find(child.estado);
+        if (it_child==explored.end() or child.coste_g<it_child->second) 
+          frontier.push(child);
+      }
+    }
+  }
+
+  return path;
 }
 
 

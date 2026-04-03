@@ -214,7 +214,15 @@ list<Action> B_Anchura(const EstadoT &inicio, const EstadoT &final,
 list<Action> B_Anchura_V2(const EstadoT &inicio, const EstadoT &final, 
                           const vector<vector<unsigned char>> &terreno,
                           const vector<vector<unsigned char>> &altura
-); 
+);
+
+/**
+ * @brief 
+ */
+list<Action> A_Star(const EstadoT &inicio, const EstadoT &final, 
+                    const vector<vector<unsigned char>> &terreno,
+                    const vector<vector<unsigned char>> &altura
+);
 
 protected:
   // =========================================================================
