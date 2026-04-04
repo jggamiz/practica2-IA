@@ -39,6 +39,57 @@ struct NodoI {
   }
 };
 
+struct EstadoTubo {
+  int f;
+  int c;
+  int op_aplicada;
+
+  bool operator==(const EstadoTubo &st) const {
+    return f==st.f and c==st.c and op_aplicada==st.op_aplicada;
+  }
+
+  bool operator<(const EstadoTubo &st) const {
+    if (f < st.f) return true;
+    else if (f == st.f and c < st.c) return true;
+    else if (f == st.f and c == st.c  and op_aplicada < st.op_aplicada) return true;
+    return false;
+  }
+};
+
+struct NodoTubo {
+  EstadoTubo estado;
+  list<Paso> secuencia;
+
+  // Costes para el A*
+  int coste_g;  // Número de tramos (acciones INSTALL), que es lo que queremos minimizar
+  int coste_h;  // Distancia Manhattan a la 'U' más cercana
+  int coste_f;  // g + h (coste total estimado)
+
+  // Presupuestos acumulados
+  int energia_gastada;
+  int eco_acumulado;
+
+  bool operator==(const NodoTubo &node) const {
+    return estado == node.estado;
+  }
+
+  bool operator<(const NodoTubo &node) const {
+    // priority_queue extrae el elemento MAYOR por defecto. Al usar '>' la cola extraerá siempre 
+    // el nodo con el MENOR coste de tiempo (es decir que estamos simulando una min-heap)
+    if (coste_f > node.coste_f) return true;
+
+    // En caso de que tengan el mismo coste total, preferimos el que ha gastado menos impacto ecológico
+    if (coste_f == node.coste_f and eco_acumulado > node.eco_acumulado) return true;
+
+    // En caso de empate, preferimos el que ha gastado menos energía
+    if (coste_f == node.coste_f and eco_acumulado == node.eco_acumulado and eco_acumulado > node.eco_acumulado) return true;
+    
+    return false;
+  }
+};
+
+
+
 class ComportamientoIngeniero : public Comportamiento {
 public:
   // =========================================================================
@@ -156,6 +207,11 @@ public:
   list<Action> B_Anchura_Nivel2(const EstadoI &inicio, const EstadoI &final, 
                                 const vector<vector<unsigned char>> &terreno,
                                 const vector<vector<unsigned char>> &altura
+  );
+
+  list<Paso> PlanificarTuberias_AStar(int f_bel, int c_bel, int max_energia, int max_eco, 
+                                      const vector<vector<unsigned char>> &terreno, 
+                                      const vector<vector<unsigned char>> &altura
   );
 
 protected:

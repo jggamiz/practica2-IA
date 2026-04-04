@@ -621,6 +621,62 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
 // ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 4
+
+/**
+ * @brief Extrae los costes de energía y ecología según el terreno y la operación
+ */
+void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
+  int install_energ = 30, install_eco = 30;
+  int raise_energ = 40, raise_eco = 40;
+  int dig_energ = 50, dig_eco = 50;
+
+  switch(terreno) {
+    case 'A':
+      install_energ = 60, install_eco = 50;
+      raise_energ = 0, raise_eco = 0;
+      dig_energ = 0, dig_eco = 0;
+      break;
+    case 'H':
+      install_energ = 45, install_eco = 45;
+      raise_energ = 55, raise_eco = 55;
+      dig_energ = 65, dig_eco = 65;
+      break;
+    case 'S':
+      install_energ = 25, install_eco = 25;
+      raise_energ = 30, raise_eco = 30;
+      dig_energ = 40, dig_eco = 40;
+      break;      
+    case 'C': case 'U':
+      install_energ = 15, install_eco = 15;
+      raise_energ = 10, raise_eco = 10;
+      dig_energ = 25, dig_eco = 25;
+      break;
+  }
+
+  energia = install_energ;
+  eco = install_eco;
+
+  if (op == 1) {  // RAISE
+    energia += raise_energ;
+    eco += raise_eco;
+  } else if (op == -1) {  // DIG
+    energia += dig_energ;
+    eco += dig_eco;
+  }
+}
+
+
+
+
+list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_bel, int max_energia, int max_eco, 
+                                                             const vector<vector<unsigned char>> &terreno, 
+                                                             const vector<vector<unsigned char>> &altura) 
+{
+  list<Paso> plan;
+  return plan;
+}
+
+
 /**
  * @brief Comportamiento del ingeniero para el Nivel 4.
  * @param sensores Datos actuales de los sensores.
@@ -628,6 +684,23 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores)
 {
+  // Si ya hemos calculado y validado el plan, no hay que hacer nada más
+  if (hayPlan) return IDLE;
+
+  // Extraemos los datos del mundo
+  int f_bel = sensores.BelPosF;
+  int c_bel = sensores.BelPosC;
+  int max_energia = sensores.energia;
+  int max_eco = sensores.ecologico;
+
+  // Ejecutar el planificador de Tuberías
+  list<Paso> plan_tuberias = PlanificarTuberias_AStar(f_bel, c_bel, max_energia, max_eco, mapaResultado, mapaCotas);
+    
+  if (!plan_tuberias.empty()) {
+    VisualizaRedTuberias(plan_tuberias);
+    hayPlan = true;
+  }
+
   return IDLE;
 }
 // --------------------------------------------------------------------------------

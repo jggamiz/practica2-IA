@@ -33,11 +33,11 @@ struct NodoT {
 
   // Costes para el A*
   int coste_g;  // Coste real acumulado (energía gastada hasta llegar a este nodo)
-  int coste_h;  // Heurística (energía estimada que hay qye gastar para llegar a destino)
+  int coste_h;  // Heurística (energía estimada que hay que gastar para llegar a destino)
   int coste_f;  // g + h (coste total estimado)
 
   bool operator==(const NodoT &node) const {
-    return estado==node.estado; // no importa el campo secuencia para que dos nodo sean iguales
+    return estado==node.estado; // no importa el campo secuencia para que dos nodos sean iguales
   }
 
   // Orden para la priority queue
