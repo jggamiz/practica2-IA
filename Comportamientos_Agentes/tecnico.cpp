@@ -475,7 +475,7 @@ int Heuristica(const EstadoT &actual, const EstadoT &final) {
 int CalcularConsumoTecnico(Action accion, char terreno_origen, int cota_actual, int cota_final) {
   int consumo = 0;
   int extra_altura = 0;
-  int diff_altura = cota_actual - cota_final;
+  int diff_altura = cota_final - cota_actual;
 
   switch (accion) {
     case WALK:
@@ -570,7 +570,7 @@ list<Action> ComportamientoTecnico::A_Star(const EstadoT &inicio, const EstadoT 
     frontier.pop();
 
     // Condición de finalización (al extraer, no al generar)
-    if (current_node.estado.site.f==final.site.c and current_node.estado.site.c==final.site.c) {
+    if (current_node.estado.site.f==final.site.f and current_node.estado.site.c==final.site.c) {
       path = current_node.secuencia;
       return path;
     }
