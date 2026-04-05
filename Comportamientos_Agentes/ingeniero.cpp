@@ -3,6 +3,8 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <map>
+#include <utility>
 #include <cstdlib>
 
 using namespace std;
@@ -665,7 +667,37 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
   }
 }
 
+/**
+ * @brief Comprueba si la operación de altura es válida en el terreno indicado
+ */
+bool EsOpcionValida(char terreno, int altura, int op) {
+  if (terreno == 'M' or terreno == 'P') return false; // no se puede construir en muros ni precipicios
+  if (op == 1 and (terreno == 'A' or altura >= 9)) return false;  // RAISE
+  if (op == -1 and (terreno == 'A' or altura <= 1)) return false; // DIG
+  return true;
+}
 
+
+/**
+ * @brief Calcula la distancia Manhattan para llegar a la planta 'U' más cercana
+ * @param f Fila de la casilla actual.
+ * @param c Columna de la casilla actual.
+ * @param terreno Mapa del terreno.
+ * @return Distancia Manhattan mínima hasta una casilla 'U'.
+ */
+int HeuristicaTubo(int f, int c, const vector<vector<unsigned char>> &terreno) {
+  int min_dist = 999999;
+  for (int i=0; i<terreno.size(); i++) {
+    for (int j=0; j<terreno[i].size(); j++) {
+      if (terreno[i][j] == 'U') {
+        int dist = abs(f-i) + abs(c-j);
+        if (dist < min_dist) min_dist = dist;
+      }  
+    }
+  }
+
+  return min_dist;
+}
 
 
 list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_bel, int max_energia, int max_eco, 
@@ -673,6 +705,90 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
                                                              const vector<vector<unsigned char>> &altura) 
 {
   list<Paso> plan;
+  priority_queue<NodoTubo> frontier;
+  map<EstadoTubo, int> explored;  // guarda el coste_g mínimo para llegar a un estado
+
+  // Inicializamos insertando hasta tres nodos iniciales 
+  for (int op=-1; op<=1; op++) {
+    char terr = terreno[f_bel][c_bel];
+    int alt = altura[f_bel][c_bel] - '0';
+
+    if (EsOpcionValida(terr, alt, op)) {
+      NodoTubo start;
+      start.estado = {f_bel, c_bel, op};
+      ObtenerCostesTubo(terr, op, start.energia_gastada, start.eco_acumulado);
+
+      // Si el origen ya excede los límites lo descartamos
+      if (start.energia_gastada > max_energia or start.eco_acumulado > max_eco) continue;
+
+      start.coste_g = 1; // 1 tramo
+      start.coste_h = HeuristicaTubo(f_bel, c_bel, terreno);
+      start.coste_f = start.coste_g + start.coste_h;
+      start.secuencia.push_back({f_bel, c_bel, op});
+
+      frontier.push(start);
+    }
+  }
+
+  int df[] = {-1, 1, 0, 0};
+  int dc[] = {0, 0, -1, 1};
+
+  while(!frontier.empty()) {
+    NodoTubo current = frontier.top();
+    frontier.pop();
+
+    // Condición para acabar: cuando llegamos a la planta 'U'
+    if (terreno[current.estado.f][current.estado.c] == 'U') return current.secuencia;
+
+    // Control de explorados
+    auto it = explored.find(current.estado);
+    if (it != explored.end() and it->second <= current.coste_g) continue;
+    explored[current.estado] = current.coste_g;
+
+    // Generamos hijos (next)
+    for (int i=0; i<4; i++) {
+      int n_f = current.estado.f + df[i];
+      int n_c = current.estado.c + dc[i];
+
+      // Comprobamos que no nos hemos salido del mapa
+      if (n_f < 0 or n_f >= terreno.size() or n_c < 0 or n_c >= terreno[0].size()) continue;
+
+      char n_terr = terreno[n_f][n_c];
+      int n_alt = altura[n_f][n_c] - '0';
+
+      // Probamos las tres modificaciones posibles en la casilla destino
+      for (int n_op=-1; n_op<=1; n_op++) {
+        if (EsOpcionValida(n_terr, n_alt, n_op)) {
+          int alt_mod_current = (altura[current.estado.f][current.estado.c] - '0') + current.estado.op_aplicada;
+          int alt_mod_next = n_alt + n_op;
+
+          // El origen debe ser igual o una unidad mayor que el destino
+          int diff_altura = alt_mod_current - alt_mod_next;
+          if (diff_altura == 0 or diff_altura == 1) {
+            int coste_energ, coste_eco;
+            ObtenerCostesTubo(n_terr, n_op, coste_energ, coste_eco);
+
+            NodoTubo child = current;
+            child.estado = {n_f, n_c, n_op};
+            child.energia_gastada += coste_energ;
+            child.eco_acumulado += coste_eco;
+
+            // Poda por límites de consumo
+            if (child.energia_gastada > max_energia or child.eco_acumulado > max_eco) continue;
+
+            child.coste_g += 1;
+            child.coste_h = HeuristicaTubo(n_f, n_c, terreno);
+            child.coste_f = child.coste_g + child.coste_h;
+            child.secuencia.push_back({n_f, n_c, n_op});
+
+            auto it_child = explored.find(child.estado);
+            if (it_child == explored.end() or child.coste_g < it_child->second) frontier.push(child);
+          }
+        }
+      }
+    }
+  }
+
   return plan;
 }
 
@@ -691,7 +807,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
   int f_bel = sensores.BelPosF;
   int c_bel = sensores.BelPosC;
   int max_energia = sensores.energia;
-  int max_eco = sensores.ecologico;
+  int max_eco = 99999;
 
   // Ejecutar el planificador de Tuberías
   list<Paso> plan_tuberias = PlanificarTuberias_AStar(f_bel, c_bel, max_energia, max_eco, mapaResultado, mapaCotas);
