@@ -156,6 +156,27 @@ bool Find(const NodoT &st, const list<NodoT> &lista) {
 // NIVEL 0
 
 /**
+ * @brief Calcula la posición absoluta de la casilla apuntada por un sensor frontal.
+ * @param idx índice del sensor (1=45ºizq, 2=frente, 3=45ºdch)
+ * @param fil fila actual del agente
+ * @param col columna actual del agente
+ * @param brujula Orientación del agente (0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW)
+ */
+pair<int,int> PosAbsolutaSensorT(int idx, int fil, int col, int brujula)
+{
+  // Desplazamiento (fila, col) para cada orientación (N→NW)
+  int df[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+  int dc[] = {0, 1, 1, 1, 0, -1, -1, -1};
+
+  int dir;
+  if (idx == 1) dir = (brujula - 1 + 8) % 8; // 45º izquierda
+  else if (idx == 2) dir = brujula; // frente
+  else dir = (brujula + 1) % 8; // 45º derecha
+
+  return {fil + df[dir], col + dc[dir]};
+}
+
+/**
  * @brief Determina si la casilla es viable por altura
  * @param casilla tipo de terreno
  * @param dif diferencia de altura entre casillas
@@ -172,27 +193,44 @@ char ViablePorAlturaT(char casilla, int dif) {
  * @param i terreno que tiene en la posición 1 de superficie (45 izq)
  * @param c terreno que tiene en la posición 2 de superficie (justo delante)
  * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param vis_i/c/d indica si la casilla izq/centro/dch ya fue visitada
  * @param zap indica si el agente tiene las zapatillas
  * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
  */
-int VeoCasillaInteresanteT(char i, char c, char d, bool zap){
-  if (c=='U') return 2;
-  else if (i=='U') return 1;
-  else if (d=='U') return 3;
-  else if (!zap) {
-    if (c=='D') return 2;
-    else if (i=='D') return 1;
-    else if (d=='D') return 3; 
+int VeoCasillaInteresanteT(char i, char c, char d, bool zap, bool vis_i, bool vis_c, bool vis_d){
+  // Meta: prioridad absoluta siempre
+  if (c == 'U') return 2;
+  if (i == 'U') return 1;
+  if (d == 'U') return 3;
+
+  // Zapatillas: solo si no las tenemos
+  if (!zap) {
+    if (c == 'D' && !vis_c) return 2;
+    if (i == 'D' && !vis_i) return 1;
+    if (d == 'D' && !vis_d) return 3;
+    if (c == 'D') return 2;
+    if (i == 'D') return 1;
+    if (d == 'D') return 3;
   }
-  if (c=='C') return 2;
-  else if (i=='C') return 1;
-  else if (d=='C') return 3;
-  else if (zap) { // cuando el técnico tiene las zapatillas, 'B' es transitable
-    if (c=='B') return 2;
-    else if (i=='B') return 1;
-    else if (d=='B') return 3;
+
+  // Camino normal: no visitadas primero
+  if (c == 'C' && !vis_c) return 2;
+  if (i == 'C' && !vis_i) return 1;
+  if (d == 'C' && !vis_d) return 3;
+  if (c == 'C') return 2;
+  if (i == 'C') return 1;
+  if (d == 'C') return 3;
+
+  // Bosque ('B'): solo si tiene zapatillas
+  if (zap) {
+    if (c == 'B' && !vis_c) return 2;
+    if (i == 'B' && !vis_i) return 1;
+    if (d == 'B' && !vis_d) return 3;
+    if (c == 'B') return 2;
+    if (i == 'B') return 1;
+    if (d == 'B') return 3;
   }
-  
+
   return 0;
 }
 
@@ -209,6 +247,11 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   // Definición del comportamiento
   if (sensores.superficie[0]=='U') return IDLE; // ha llegado a una 'U'
 
+  // Marcar casilla actual como visitada
+  visitadas.insert({sensores.posF, sensores.posC});
+
+
+  // 1. Terminar maniobras pendientes (giros)
   if (giro45Izq > 0) {
     giro45Izq--;
     accion = TURN_SL;
@@ -216,12 +259,30 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
     return accion; 
   }
 
-  int current_cota = sensores.cota[0];
-  char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-current_cota);
-  char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-current_cota);
-  char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-current_cota);
+  if (giro45Dch > 0) {
+    giro45Dch--;
+    accion = TURN_SR;
+    last_action = accion;
+    return accion; 
+  }
 
-  int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas);
+  // 2. Calcular posiciones absolutas y flags de visitado
+  auto abs_i = PosAbsolutaSensorT(1, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_c = PosAbsolutaSensorT(2, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_d = PosAbsolutaSensorT(3, sensores.posF, sensores.posC, sensores.rumbo);
+
+  bool vis_i = visitadas.count(abs_i) > 0;
+  bool vis_c = visitadas.count(abs_c) > 0;
+  bool vis_d = visitadas.count(abs_d) > 0;
+
+  // 3. Filtro por altura
+  int cota = sensores.cota[0];
+  char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-cota);
+  char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-cota);
+  char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-cota);
+
+  int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas, vis_i, vis_c, vis_d);
+
   switch (pos) {
   case 2:
       accion = WALK;

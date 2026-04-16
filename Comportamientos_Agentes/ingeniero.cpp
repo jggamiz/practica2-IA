@@ -42,6 +42,28 @@ Action ComportamientoIngeniero::think(Sensores sensores)
 // NIVEL 0
 
 /**
+ * @brief Calcula la posición absoluta de la casilla apuntada por un sensor frontal.
+ * @param idx índice del sensor (1=45ºizq, 2=frente, 3=45ºdch)
+ * @param fil fila actual del agente
+ * @param col columna actual del agente
+ * @param brujula Orientación del agente (0=N,1=NE,2=E,3=SE,4=S,5=SW,6=W,7=NW)
+ */
+pair<int,int> PosAbsolutaSensorI(int idx, int fil, int col, int brujula)
+{
+  // Desplazamiento (fila, col) para cada orientación (N→NW)
+  int df[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+  int dc[] = {0, 1, 1, 1, 0, -1, -1, -1};
+
+  int dir;
+  if (idx == 1) dir = (brujula - 1 + 8) % 8; // 45º izquierda
+  else if (idx == 2) dir = brujula; // frente
+  else dir = (brujula + 1) % 8; // 45º derecha
+
+  return {fil + df[dir], col + dc[dir]};
+}
+
+
+/**
  * @brief Determina si la casilla es viable por altura
  * @param casilla tipo de terreno
  * @param dif diferencia de altura entre casillas
@@ -55,26 +77,42 @@ char ViablePorAlturaI(char casilla, int dif, bool zap) {
 
 
 /**
- * @brief Determina la mejor opción entre las tres casillas que tiene delante
+ * @brief Determina la mejor opción entre las tres casillas que tiene delante, priorizando las no visitadas
  * @param i terreno que tiene en la posición 1 de superficie (45 izq)
  * @param c terreno que tiene en la posición 2 de superficie (justo delante)
  * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param vis_i/c/d indica si la casilla izq/centro/dch ya fue visitada
  * @param zap indica si el agente tiene las zapatillas
  * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
  */
-int VeoCasillaInteresanteI(char i, char c, char d, bool zap){
-  if (c=='U') return 2;
-  else if (i=='U') return 1;
-  else if (d=='U') return 3;
-  else if (!zap) {
-    if (c=='D') return 2;
-    else if (i=='D') return 1;
-    else if (d=='D') return 3; 
+int VeoCasillaInteresanteI(char i, char c, char d, bool zap, bool vis_i, bool vis_c, bool vis_d){
+  // La meta siempre tiene la máxima prioridad
+  if (c == 'U') return 2;
+  if (i == 'U') return 1;
+  if (d == 'U') return 3;
+
+  // Zapatillas: solo si no las tenemos aún
+  if (!zap) {
+    if (c == 'D' && !vis_c) return 2;
+    if (i == 'D' && !vis_i) return 1;
+    if (d == 'D' && !vis_d) return 3;
+    // Si todas visitadas, igualmente las recogemos (están en el camino)
+    if (c == 'D') return 2;
+    if (i == 'D') return 1;
+    if (d == 'D') return 3;
   }
-  if (c=='C') return 2;
-  else if (i=='C') return 1;
-  else if (d=='C') return 3;
-  else return 0;
+
+  // Caminos: primero no visitados, luego visitados como último recurso
+  if (c == 'C' && !vis_c) return 2;
+  if (i == 'C' && !vis_i) return 1;
+  if (d == 'C' && !vis_d) return 3;
+
+  // Todas visitadas: moverse igual para no quedarse parado
+  if (c == 'C') return 2;
+  if (i == 'C') return 1;
+  if (d == 'C') return 3;
+
+  return 0;
 }
 
 
@@ -91,10 +129,20 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   // Descripción del comportamiento
   if (sensores.superficie[0]=='U') return IDLE; // Llegué a la meta
 
+  // Marcar casilla actual como visitada
+  visitadas.insert({sensores.posF, sensores.posC});
+
   // 1. Terminar maniobras pendientes
   if (giro45Izq > 0) {
     giro45Izq--;
     accion = TURN_SL;
+    last_action = accion;
+    return accion; 
+  }
+
+  if (giro45Dch > 0) {
+    giro45Dch--;
+    accion = TURN_SR;
     last_action = accion;
     return accion; 
   }
@@ -107,21 +155,32 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
     return accion;
   }
 
-  // 3. Comportamiento normal
-  int current_cota = sensores.cota[0];
-  
+
+  // 3. Calcular posiciones absolutas de las tres casillas que detectamos justo delante
+  auto abs_i = PosAbsolutaSensorI(1, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_c = PosAbsolutaSensorI(2, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_d = PosAbsolutaSensorI(3, sensores.posF, sensores.posC, sensores.rumbo);
+
+  bool vis_i = visitadas.count(abs_i) > 0;
+  bool vis_c = visitadas.count(abs_c) > 0;
+  bool vis_d = visitadas.count(abs_d) > 0;
+
+  // 4. Ignorar casillas con agente técnico
   // Si el técnico no está de frente, sino en una diagonal (1 o 3) y en esa diagonal también hay una casilla
   // interesante ('U' o 'D'), la función VeoCasillaInteresanteI manda al agente allí y habrá colisión
   // Para arreglarlo mandamos un 'P' directamente en el param casilla en caso de que haya agente
-  char sup_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
-  char sup_c = sensores.superficie[2]; // Ya cubierto arriba, pero por coherencia
-  char sup_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+  char cas_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
+  char cas_c = (sensores.agentes[2] == 't') ? 'P' : sensores.superficie[2]; // Ya cubierto arriba, pero por coherencia
+  char cas_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+  
+  // 5. Filtro por altura
+  int cota = sensores.cota[0];
+  char i = ViablePorAlturaI(cas_i, sensores.cota[1]-cota, tiene_zapatillas);
+  char c = ViablePorAlturaI(cas_c, sensores.cota[2]-cota, tiene_zapatillas);
+  char d = ViablePorAlturaI(cas_d, sensores.cota[3]-cota, tiene_zapatillas);
 
-  char i = ViablePorAlturaI(sup_i, sensores.cota[1]-current_cota, tiene_zapatillas);
-  char c = ViablePorAlturaI(sup_c, sensores.cota[2]-current_cota, tiene_zapatillas);
-  char d = ViablePorAlturaI(sup_d, sensores.cota[3]-current_cota, tiene_zapatillas);
+  int pos = VeoCasillaInteresanteI(i, c, d, tiene_zapatillas, vis_i, vis_c, vis_d);
 
-  int pos = VeoCasillaInteresanteI(i, c, d, tiene_zapatillas);
   switch(pos) {
     case 2:
       accion = WALK;
@@ -134,7 +193,6 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
       break;
     default:
       accion = TURN_SL;
-      // giro45Izq = 1; // para girar 90º en vez de 45º 
       break;
   }
 
