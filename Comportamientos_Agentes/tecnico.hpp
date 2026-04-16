@@ -92,6 +92,7 @@ public:
     last_action = IDLE;
     tiene_zapatillas = false;
     giro45Izq = 0;
+    giro45Dch = 0;
   }
 
   /**
