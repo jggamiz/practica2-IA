@@ -272,14 +272,31 @@ int ValoraTerrenoI(char terreno) {
   }
 }
 
+
+/**
+  * @brief Calcula la puntuación efectiva de una casilla combinando valor del terreno y visitas.
+  * @param valorTerreno Valor base obtenido de ValoraTerrenoI().
+  * @param visitas Número de veces que se ha visitado esa casilla.
+  * @return Puntuación float (mayor = más atractiva). Retorna -1.0f si valorTerreno == 0.
+  */
+float ScoreCasillaI(int valorTerreno, int visitas) {
+  if (valorTerreno == 0) return -1.0f;
+  // Dividimos el valor base entre (1 + visitas) para penalizar casillas muy transitadas.
+  return static_cast<float>(valorTerreno) / (1.0f + visitas);
+}
+
+
 /**
  * @brief Determina la mejor opción para explorar evitando bucles
+ * Combina el valor del terreno con una penalización por visitas previas.
+ * Más visitas = menos atractivo, terreno mejor = más atractivo.
  * @param i terreno que tiene en la posición 1 de superficie (45 izq)
  * @param c terreno que tiene en la posición 2 de superficie (justo delante)
  * @param d terreno que tiene en la posición 3 de superficie (45 dch)
+ * @param cnt_i/c/d indica cuántas veces ha sido visitada la casilla izq/centro/dch
  * @return 2 (WALK), 1 (TURN_SL), 3 (TURN_SR) y 0 si está bloqueado
  */
-int VeoCasillaExploracionI(char i, char c, char d) {
+int VeoCasillaExploracionI(char i, char c, char d, int cnt_i, int cnt_c, int cnt_d) {
   int vi = ValoraTerrenoI(i);
   int vc = ValoraTerrenoI(c);
   int vd = ValoraTerrenoI(d);
@@ -287,17 +304,15 @@ int VeoCasillaExploracionI(char i, char c, char d) {
   // Si estamos rodeados de obstáculos forzamos un giro
   if (vi==0 and vc==0 and vd==0) return 0;
 
-  // La prioridad máaxima es ir de frente si es igual o mejor que los lados
-  if (vc>=vi and vc>=vd and vc>0) return 2;
+  // Calculamos puntuaciones
+  float si = ScoreCasillaI(vi, cnt_i);
+  float sc = ScoreCasillaI(vc, cnt_c);
+  float sd = ScoreCasillaI(vd, cnt_d);
 
-  // Si ir de frente es peor, elegimos el mejor de los lados
-  if (vi>vd) return 1;
-  if (vd>vi) return 3;
-
-  // Si hay empate resolvemos con alternancia
-  static int toggle = 0;
-  toggle = !toggle;
-  return toggle ? 1 : 3;
+  // El centro tiene siempre preferencia (para evitar giros innecesarios)
+  if (sc >= si and sc >= sd) return 2;
+  if (si >= sd) return 1;
+  return 3;
 }
 
 
@@ -316,7 +331,10 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   // Actualizar variables de estado
   if (sensores.superficie[0]=='D') tiene_zapatillas = true;
 
-  // Terminar maniobras pendientes
+  // Acutalizamos que estamos visitando esta casilla en el map
+  visitadas[{sensores.posF, sensores.posC}]++;
+
+  // 1. Terminar maniobras pendientes
   if (giro45Izq>0) {
     giro45Izq--;
     accion = TURN_SL;
@@ -324,7 +342,14 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
     return accion;
   }
 
-  // Esquivar técnico de frente
+  if (giro45Dch>0) {
+    giro45Dch--;
+    accion = TURN_SR;
+    last_action = accion;
+    return accion;
+  }
+
+  // 2. Esquivar técnico de frente
   if (sensores.agentes[2]=='t') {
     accion = TURN_SL;
     giro45Izq = 1; // Recordamos que estamos en mitad del giro
@@ -332,44 +357,32 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
     return accion;
   }
 
-  // Evaluamos el terreno cercano
-  int current_cota = sensores.cota[0];
+  // 3. Calcular posiciones absolutas de las tres casillas que detectamos justo delante
+  auto abs_i = PosAbsolutaSensorI(1, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_c = PosAbsolutaSensorI(2, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_d = PosAbsolutaSensorI(3, sensores.posF, sensores.posC, sensores.rumbo);
 
-  // Comprobamos que el técnico no esté en las diagonales
-  char sup_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
-  char sup_c = sensores.superficie[2]; 
-  char sup_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+  // Almacenamos las casillas visitadas
+  int cnt_i = visitadas.count(abs_i) ? visitadas[abs_i] : 0;
+  int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
+  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
 
-  // Comprobamos la viabilidad por altura (y por colisiones)
-  char i = ViablePorAlturaI(sup_i, sensores.cota[1]-current_cota, tiene_zapatillas);
-  char c = ViablePorAlturaI(sup_c, sensores.cota[2]-current_cota, tiene_zapatillas);
-  char d = ViablePorAlturaI(sup_d, sensores.cota[3]-current_cota, tiene_zapatillas);
+  // 4. Comprobamos que el técnico no esté en las diagonales
+  char cas_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
+  char cas_c = (sensores.agentes[2] == 't') ? 'P' : sensores.superficie[2]; // Ya cubierto arriba, pero por coherencia
+  char cas_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
 
-  // Toma de decisión
-  int pos = VeoCasillaExploracionI(i, c, d);
+  // 5. Filtro por altura
+  int cota = sensores.cota[0];
+  char i = ViablePorAlturaI(cas_i, sensores.cota[1]-cota, tiene_zapatillas);
+  char c = ViablePorAlturaI(cas_c, sensores.cota[2]-cota, tiene_zapatillas);
+  char d = ViablePorAlturaI(cas_d, sensores.cota[3]-cota, tiene_zapatillas);
+
+  int pos = VeoCasillaExploracionI(i, c, d, cnt_i, cnt_c, cnt_d);
   
   switch(pos) {
     case 2:
       accion = WALK;
-      /*{
-        // 1. La casilla intermedia (2) debe estar libre de agentes
-        bool intermedio_libre = (sensores.agentes[2] == '_'); 
-        
-        // 2. La casilla final (6) debe merecer la pena
-        bool final_interesante = (ValoraTerrenoI(sensores.superficie[6]) >= 4);
-        
-        // 3. La diferencia de altura entre la actual (0) y la final (6)
-        int diff_altura = abs(sensores.cota[6]-current_cota);
-        bool altura_ok = diff_altura < (tiene_zapatillas ? 3 : 2);
-        
-        // Si se cumplen todas las condiciones físicas, ¡saltamos!
-        // si solo quieres que salte cuando caiga en caminos o senderos para no gastar batería a lo tonto.
-        if (intermedio_libre and final_interesante and altura_ok) {
-          accion = JUMP;
-        } else {
-          accion = WALK;
-        }
-      }*/
       break;
     case 1:
       accion = TURN_SL; // Avanzamos en diagonal izquierda

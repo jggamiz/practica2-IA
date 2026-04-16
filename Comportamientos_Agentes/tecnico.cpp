@@ -397,6 +397,18 @@ int ValoraTerrenoT(char terreno, bool zap) {
 }
 
 /**
+  * @brief Calcula la puntuación efectiva de una casilla combinando valor del terreno y visitas.
+  * @param valorTerreno Valor base obtenido de ValoraTerrenoI().
+  * @param visitas Número de veces que se ha visitado esa casilla.
+  * @return Puntuación float (mayor = más atractiva). Retorna -1.0f si valorTerreno == 0.
+  */
+float ScoreCasillaT(int valorTerreno, int visitas) {
+  if (valorTerreno == 0) return -1.0f;
+  // Dividimos el valor base entre (1 + visitas) para penalizar casillas muy transitadas.
+  return static_cast<float>(valorTerreno) / (1.0f + visitas);
+}
+
+/**
  * @brief Determina la mejor opción para explorar evitando bucles
  * @param i terreno que tiene en la posición 1 de superficie (45 izq)
  * @param c terreno que tiene en la posición 2 de superficie (justo delante)
@@ -404,7 +416,7 @@ int ValoraTerrenoT(char terreno, bool zap) {
  * @param zap indica si el agente tiene las zapatillas
  * @return 2 (WALK), 1 (TURN_SL), 3 (TURN_SR) y 0 si está bloqueado
  */
-int VeoCasillaExploracionT(char i, char c, char d, bool zap) {
+int VeoCasillaExploracionT(char i, char c, char d, bool zap, int cnt_i, int cnt_c, int cnt_d) {
   int vi = ValoraTerrenoT(i, zap);
   int vc = ValoraTerrenoT(c, zap);
   int vd = ValoraTerrenoT(d, zap);
@@ -412,17 +424,15 @@ int VeoCasillaExploracionT(char i, char c, char d, bool zap) {
   // Si estamos rodeados de obstáculos forzamos un giro
   if (vi==0 and vc==0 and vd==0) return 0;
 
-  // La prioridad máaxima es ir de frente si es igual o mejor que los lados
-  if (vc>=vi and vc>=vd and vc>0) return 2;
+  // Calculamos puntuaciones
+  float si = ScoreCasillaT(vi, cnt_i);
+  float sc = ScoreCasillaT(vc, cnt_c);
+  float sd = ScoreCasillaT(vd, cnt_d);
 
-  // Si ir de frente es peor, elegimos el mejor de los lados
-  if (vi>vd) return 1;
-  if (vd>vi) return 3;
-
-  // Si hay empate resolvemos con alternancia
-  static int toggle = 0;
-  toggle = !toggle;
-  return toggle ? 1 : 3;
+  // El centro tiene siempre preferencia (para evitar giros innecesarios)
+  if (sc >= si and sc >= sd) return 2;
+  if (si >= sd) return 1;
+  return 3;
 }
 
 
@@ -440,7 +450,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
   // Actualizar variables de estado
   if (sensores.superficie[0]=='D') tiene_zapatillas = true;
 
-  // Terminar maniobras pendientes
+  // 1. Terminar maniobras pendientes
   if (giro45Izq>0) {
     giro45Izq--;
     accion = TURN_SL;
@@ -448,29 +458,31 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
     return accion;
   }
 
-  // Esquivar técnico de frente
-  if (sensores.agentes[2]=='t') {
-    accion = TURN_SL;
-    giro45Izq = 1; // Recordamos que estamos en mitad del giro
+  if (giro45Dch>0) {
+    giro45Dch--;
+    accion = TURN_SR;
     last_action = accion;
     return accion;
   }
 
-  // Evaluamos el terreno cercano
-  int current_cota = sensores.cota[0];
+  // 2. Calcular posiciones absolutas de las tres casillas que detectamos justo delante
+  auto abs_i = PosAbsolutaSensorT(1, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_c = PosAbsolutaSensorT(2, sensores.posF, sensores.posC, sensores.rumbo);
+  auto abs_d = PosAbsolutaSensorT(3, sensores.posF, sensores.posC, sensores.rumbo);
 
-  // Comprobamos que el técnico no esté en las diagonales
-  char sup_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
-  char sup_c = sensores.superficie[2]; 
-  char sup_d = (sensores.agentes[3] == 't') ? 'P' : sensores.superficie[3];
+  // Almacenamos las casillas visitadas
+  int cnt_i = visitadas.count(abs_i) ? visitadas[abs_i] : 0;
+  int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
+  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
 
-  // Comprobamos la viabilidad por altura (y por colisiones)
-  char i = ViablePorAlturaT(sup_i, sensores.cota[1]-current_cota);
-  char c = ViablePorAlturaT(sup_c, sensores.cota[2]-current_cota);
-  char d = ViablePorAlturaT(sup_d, sensores.cota[3]-current_cota);
+  // 3. Filtro por altura
+  int cota = sensores.cota[0];
+  char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-cota);
+  char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-cota);
+  char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-cota);
 
   // Toma de decisión
-  int pos = VeoCasillaExploracionT(i, c, d, tiene_zapatillas);
+  int pos = VeoCasillaExploracionT(i, c, d, tiene_zapatillas, cnt_i, cnt_c, cnt_d);
   
   switch(pos) {
     case 2:
@@ -486,7 +498,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
       // Si nos hemos metido en un rincón donde ni recto ni diagonales son transitables,
       // forzamos un giro de 90º para darnos la vuelta poco a poco.
       accion = TURN_SL;
-      giro45Izq = 1; 
+      // giro45Izq = 1; 
       break;
   }
 
