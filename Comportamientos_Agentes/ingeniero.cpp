@@ -50,7 +50,18 @@ Action ComportamientoIngeniero::think(Sensores sensores)
  */
 pair<int,int> PosAbsolutaSensorI(int idx, int fil, int col, int brujula)
 {
-  // Desplazamiento (fila, col) para cada orientación (N→NW)
+  /** 
+   * Desplazamiento (fila, col) para cada orientación
+   * 
+   * Dirección 0: N (Norte) → sube una fila, misma columna → df[0] = -1, dc[0] = 0
+   * Dirección 1: NE (Noreste) → sube una fila, avanza una columna → df[1] = -1, dc[1] = 1
+   * Dirección 2: E (Este) → misma fila, avanza una columna → df[2] = 0, dc[2] = 1
+   * Dirección 3: SE (Sureste) → baja una fila, avanza una columna → df[3] = 1, dc[3] = 1
+   * Dirección 4: S (Sur) → baja una fila, misma columna → df[4] = 1, dc[4] = 0
+   * Dirección 5: SW (Suroeste) → baja una fila, retrocede una columna → df[5] = 1, dc[5] = -1
+   * Dirección 6: W (Oeste) → misma fila, retrocede una columna → df[6] = 0, dc[6] = -1
+   * Dirección 7: NW (Noroeste) → sube una fila, retrocede una columna → df[7] = -1, dc[7] = -1
+  */
   int df[] = {-1, -1, 0, 1, 1, 1, 0, -1};
   int dc[] = {0, 1, 1, 1, 0, -1, -1, -1};
 
@@ -86,7 +97,7 @@ char ViablePorAlturaI(char casilla, int dif, bool zap) {
  * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
  */
 int VeoCasillaInteresanteI(char i, char c, char d, bool zap, bool vis_i, bool vis_c, bool vis_d){
-  // La meta siempre tiene la máxima prioridad
+  // Meta: siempre tiene la máxima prioridad
   if (c == 'U') return 2;
   if (i == 'U') return 1;
   if (d == 'U') return 3;
@@ -161,6 +172,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_0(Sensores sensores
   auto abs_c = PosAbsolutaSensorI(2, sensores.posF, sensores.posC, sensores.rumbo);
   auto abs_d = PosAbsolutaSensorI(3, sensores.posF, sensores.posC, sensores.rumbo);
 
+  // Almacenamos las casillas visitadas
   bool vis_i = visitadas.count(abs_i) > 0;
   bool vis_c = visitadas.count(abs_c) > 0;
   bool vis_d = visitadas.count(abs_d) > 0;

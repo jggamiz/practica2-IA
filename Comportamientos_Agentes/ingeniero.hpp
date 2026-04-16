@@ -106,7 +106,6 @@ public:
     tiene_zapatillas = false;
     giro45Izq = 0;
     giro45Dch = 0;
-    giros_sin_avanzar = 0;
   }
 
   /**
@@ -295,7 +294,6 @@ Action last_action;     // Almacena la última acción realizada
 bool tiene_zapatillas;  // Indica si el agente tiene las zapatillas
 int giro45Izq;          // Indica el número de giros a la izqiuerda que quedan por dar
 int giro45Dch;          // Indica el número de giros a la derecha que quedan por dar
-int giros_sin_avanzar;   // -1 = izquierda, +1 = derecha
 set<pair<int,int>> visitadas;
 
 bool hayPlan;            // Indica si hay una plan que ejecutar
