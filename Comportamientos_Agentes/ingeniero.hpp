@@ -294,7 +294,9 @@ Action last_action;     // Almacena la última acción realizada
 bool tiene_zapatillas;  // Indica si el agente tiene las zapatillas
 int giro45Izq;          // Indica el número de giros a la izqiuerda que quedan por dar
 int giro45Dch;          // Indica el número de giros a la derecha que quedan por dar
-set<pair<int,int>> visitadas;
+map<pair<int,int>, int> visitadas;
+// set<pair<int,int>> visitadas;
+
 
 bool hayPlan;            // Indica si hay una plan que ejecutar
 list<Action> plan;       // Almacena el plan a realizar.

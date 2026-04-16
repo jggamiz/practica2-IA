@@ -205,42 +205,68 @@ char ViablePorAlturaT(char casilla, int dif) {
  * @param i terreno que tiene en la posición 1 de superficie (45 izq)
  * @param c terreno que tiene en la posición 2 de superficie (justo delante)
  * @param d terreno que tiene en la posición 3 de superficie (45 dch)
- * @param vis_i/c/d indica si la casilla izq/centro/dch ya fue visitada
+ * @param cnt_i/c/d indica cuántas veces ha sido visitada la casilla izq/centro/dch
  * @param zap indica si el agente tiene las zapatillas
  * @return 2 si es mejor WALK, 1 para TURN_SL, 3 para TURN_SR y 0 si no hay nada interesante
  */
-int VeoCasillaInteresanteT(char i, char c, char d, bool zap, bool vis_i, bool vis_c, bool vis_d){
+int VeoCasillaInteresanteT(char i, char c, char d, bool zap, int cnt_i, int cnt_c, int cnt_d){
   // Meta: siempre tiene la máxima prioridad
   if (c == 'U') return 2;
   if (i == 'U') return 1;
   if (d == 'U') return 3;
 
-  // Zapatillas: solo si no las tenemos
+  // Zapatillas: solo si no las tenemos aún
   if (!zap) {
-    if (c == 'D' && !vis_c) return 2;
-    if (i == 'D' && !vis_i) return 1;
-    if (d == 'D' && !vis_d) return 3;
-    if (c == 'D') return 2;
-    if (i == 'D') return 1;
-    if (d == 'D') return 3;
+    int mejor = -1, min_cnt = INT16_MAX;
+    if (c == 'D' && cnt_c < min_cnt) {
+      min_cnt = cnt_c;
+      mejor = 2;
+    }
+    if (c == 'D' && cnt_i < min_cnt) {
+      min_cnt = cnt_i;
+      mejor = 1;
+    }
+    if (c == 'D' && cnt_d < min_cnt) {
+      min_cnt = cnt_d;
+      mejor = 3;
+    }
+    if (mejor != -1) return mejor;
   }
 
-  // Camino normal: no visitadas primero
-  if (c == 'C' && !vis_c) return 2;
-  if (i == 'C' && !vis_i) return 1;
-  if (d == 'C' && !vis_d) return 3;
-  if (c == 'C') return 2;
-  if (i == 'C') return 1;
-  if (d == 'C') return 3;
+  // Caminos: la casilla 'C' menos visitada
+  int mejor = -1, min_cnt = INT16_MAX;
+  if (c == 'C' && cnt_c < min_cnt) {
+    min_cnt = cnt_c;
+    mejor = 2;
+  }
+  if (i == 'C' && cnt_i < min_cnt) {
+    min_cnt = cnt_i;
+    mejor = 1;
+  }
+  if (d == 'C' && cnt_d < min_cnt) {
+    min_cnt = cnt_d;
+    mejor = 3;
+  }
+  if (mejor != -1) return mejor;
+
+  return 0;
 
   // Bosque ('B'): solo si tiene zapatillas
   if (zap) {
-    if (c == 'B' && !vis_c) return 2;
-    if (i == 'B' && !vis_i) return 1;
-    if (d == 'B' && !vis_d) return 3;
-    if (c == 'B') return 2;
-    if (i == 'B') return 1;
-    if (d == 'B') return 3;
+    int mejor = -1, min_cnt = INT16_MAX;
+    if (c == 'B' && cnt_c < min_cnt) {
+      min_cnt = cnt_c;
+      mejor = 2;
+    }
+    if (i == 'B' && cnt_i < min_cnt) {
+      min_cnt = cnt_i;
+      mejor = 1;
+    }
+    if (d == 'B' && cnt_d < min_cnt) {
+      min_cnt = cnt_d;
+      mejor = 3;
+    }
+    if (mejor != -1) return mejor;
   }
 
   return 0;
@@ -259,8 +285,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   // Definición del comportamiento
   if (sensores.superficie[0]=='U') return IDLE; // ha llegado a una 'U'
 
-  // Marcar casilla actual como visitada
-  visitadas.insert({sensores.posF, sensores.posC});
+  // Acutalizamos que estamos visitando esta casilla en el map
+  visitadas[{sensores.posF, sensores.posC}]++;
 
 
   // 1. Terminar maniobras pendientes (giros)
@@ -284,9 +310,9 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   auto abs_d = PosAbsolutaSensorT(3, sensores.posF, sensores.posC, sensores.rumbo);
 
   // Almacenamos las casillas visitadas
-  bool vis_i = visitadas.count(abs_i) > 0;
-  bool vis_c = visitadas.count(abs_c) > 0;
-  bool vis_d = visitadas.count(abs_d) > 0;
+  int cnt_i = visitadas.count(abs_i) ? visitadas[abs_i] : 0;
+  int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
+  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
 
   // 3. Filtro por altura
   int cota = sensores.cota[0];
@@ -294,7 +320,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-cota);
   char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-cota);
 
-  int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas, vis_i, vis_c, vis_d);
+  int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas, cnt_i, cnt_c, cnt_d);
 
   switch (pos) {
   case 2:
