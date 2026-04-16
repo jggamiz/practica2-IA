@@ -5,7 +5,6 @@
 #include <set>
 #include <map>
 #include <utility>
-#include <cstdlib>
 
 using namespace std;
 
@@ -213,9 +212,10 @@ int VeoCasillaExploracionI(char i, char c, char d) {
   if (vi>vd) return 1;
   if (vd>vi) return 3;
 
-  // Si los dos lados son igual de buenos, elegimos uno al azar
-  if (rand()%2 == 0) return 1;
-  else return 3;
+  // Si hay empate resolvemos con alternancia
+  static int toggle = 0;
+  toggle = !toggle;
+  return toggle ? 1 : 3;
 }
 
 
@@ -606,13 +606,26 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
     // Comprobamos si podemos avanzar de frente
     char sup_frente = sensores.superficie[2];
     bool check1 = (sup_frente != 'M' and sup_frente != 'P' and sensores.agentes[2] == '_');
-    // bool check2 = EsAccesiblePorAltura(,tiene_zapatillas);
-    if (check1 and true) accion = WALK; // Cuando ir de frente es seguro
-    else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
-                                                          // el siguiente turno   
-  } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
-    return IDLE;
-  } */
+
+    ubicacion ub = {sensores.posF, sensores.posC, sensores.rumbo};
+    bool check2 = EsAccesiblePorAltura(ub ,tiene_zapatillas);
+
+    if (check1 and check2) accion = WALK; // Cuando ir de frente es seguro
+    else { // Cuando no podemos ir de frente
+      // Evaluar opciones laterales
+      bool izq_libre = (sensores.superficie[1] != 'M' && sensores.superficie[1] != 'P' && sensores.agentes[1] == '_');
+      bool der_libre = (sensores.superficie[3] != 'M' && sensores.superficie[3] != 'P' && sensores.agentes[3] == '_');
+
+      if (izq_libre && der_libre) {
+        // Ambos lados transitables: desempatamos con alternancia
+        static int toggle = 0;
+        toggle = !toggle;
+        accion = toggle ? TURN_SL : TURN_SR;
+      } else if (izq_libre) accion = TURN_SL;
+      else if (der_libre) accion = TURN_SR;
+      else  accion = TURN_SL; // giramos a izquierda (por ejemplo) y en el siguiente paso evaluamos otra vez
+    }
+  }
 
   return accion;
 }
@@ -807,7 +820,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
   int f_bel = sensores.BelPosF;
   int c_bel = sensores.BelPosC;
   int max_energia = sensores.energia;
-  int max_eco = 99999;
+  int max_eco = sensores.max_ecologico;
 
   // Ejecutar el planificador de Tuberías
   list<Paso> plan_tuberias = PlanificarTuberias_AStar(f_bel, c_bel, max_energia, max_eco, mapaResultado, mapaCotas);

@@ -4,7 +4,6 @@
 #include <queue>
 #include <set>
 #include <map>
-#include <cstdlib>
 
 using namespace std;
 
@@ -320,9 +319,10 @@ int VeoCasillaExploracionT(char i, char c, char d, bool zap) {
   if (vi>vd) return 1;
   if (vd>vi) return 3;
 
-  // Si los dos lados son igual de buenos, elegimos uno al azar
-  if (rand()%2 == 0) return 1;
-  else return 3;
+  // Si hay empate resolvemos con alternancia
+  static int toggle = 0;
+  toggle = !toggle;
+  return toggle ? 1 : 3;
 }
 
 
@@ -425,14 +425,26 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
     // PUEDO RECUPERAR AQUÍ LA FUNCION CasillaAccesibleTecnico???
     bool check1 = (sup_frente!='M' and sup_frente!='P');
     bool check2 = sup_frente!='B' or (sup_frente=='B' and tiene_zapatillas);
-    bool check3 = abs(sensores.cota[0]-sensores.cota[2]) <= 1;
-    // bool check3= EsAccesiblePorAltura(sensores.) // COMO USO ESTO???
+
+    ubicacion ub = {sensores.posF, sensores.posC, sensores.rumbo};
+    bool check3= EsAccesiblePorAltura(ub);
+    // bool check3 = abs(sensores.cota[0]-sensores.cota[2]) <= 1;
     if (check1 and check2 and check3)  accion = WALK;     // Cuando ir de frente es seguro
-    else accion = (rand() % 2 == 0) ? TURN_SL : TURN_SR;  // Cuando no, giro al azar para escapar en
-                                                          // el siguiente turno   
-  } /* else { // Hacer algo si no lo detecta, o puedo dejarlo quieto??
-    return IDLE;
-  } */
+    else {  // Cuando no podemos ir de frente
+      // Evaluar opciones laterales
+      bool izq_libre = (sensores.superficie[1] != 'M' && sensores.superficie[1] != 'P' && sensores.agentes[1] == '_');
+      bool der_libre = (sensores.superficie[3] != 'M' && sensores.superficie[3] != 'P' && sensores.agentes[3] == '_');
+
+      if (izq_libre && der_libre) {
+        // Ambos lados transitables: desempatamos con alternancia
+        static int toggle = 0;
+        toggle = !toggle;
+        accion = toggle ? TURN_SL : TURN_SR;
+      } else if (izq_libre) accion = TURN_SL;
+      else if (der_libre) accion = TURN_SR;
+      else  accion = TURN_SL; // giramos a izquierda (por ejemplo) y en el siguiente paso evaluamos otra vez
+    }
+  }
 
   return accion;
 }
