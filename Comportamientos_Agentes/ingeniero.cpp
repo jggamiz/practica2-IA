@@ -784,21 +784,17 @@ bool EsOpcionValida(char terreno, int altura, int op) {
 
 
 /**
- * @brief Calcula la distancia Manhattan para llegar a la planta 'U' más cercana
- * @param f Fila de la casilla actual.
- * @param c Columna de la casilla actual.
- * @param terreno Mapa del terreno.
- * @return Distancia Manhattan mínima hasta una casilla 'U'.
+ * @brief Calcula la distancia Manhattan desde una posición dada hasta el conjunto casillas 'U'.
+ * @param f Fila de la posición actual del agente.
+ * @param c Columna de la posición actual del agente.
+ * @param plantas_U Vector de pares (fila, columna) que representan las ubicaciones de las plantas 'U'.
+ * @return Distancia Manhattan mínima hasta una casilla 'U' en el vector.
  */
-int HeuristicaTubo(int f, int c, const vector<vector<unsigned char>> &terreno) {
+int HeuristicaTubo(int f, int c, const vector<pair<int, int>> &plantas_U) {
   int min_dist = 999999;
-  for (int i=0; i<terreno.size(); i++) {
-    for (int j=0; j<terreno[i].size(); j++) {
-      if (terreno[i][j] == 'U') {
-        int dist = abs(f-i) + abs(c-j);
-        if (dist < min_dist) min_dist = dist;
-      }  
-    }
+  for (const auto& planta : plantas_U) {
+    int dist = abs(f-planta.first) + abs(c-planta.second);
+    if (dist < min_dist) min_dist = dist;
   }
 
   return min_dist;
@@ -811,7 +807,15 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
 {
   list<Paso> plan;
   priority_queue<NodoTubo> frontier;
-  map<EstadoTubo, int> explored;  // guarda el coste_g mínimo para llegar a un estado
+  map<EstadoTubo, vector<InfoTrayecto>> explored;  // guarda una lista de trayectos por estado
+
+  // Precalculamos las posiciones de 'U' para la heuristica
+  vector<pair<int, int>> plantas_U;
+  for (int i=0; i<terreno.size(); i++) {
+    for (int j=0; j<terreno[i].size(); j++) {
+      if (terreno[i][j] == 'U') plantas_U.push_back({i,j});
+    }
+  }
 
   // Inicializamos insertando hasta tres nodos iniciales 
   for (int op=-1; op<=1; op++) {
@@ -827,7 +831,7 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
       if (start.energia_gastada > max_energia or start.eco_acumulado > max_eco) continue;
 
       start.coste_g = 1; // 1 tramo
-      start.coste_h = HeuristicaTubo(f_bel, c_bel, terreno);
+      start.coste_h = HeuristicaTubo(f_bel, c_bel, plantas_U);
       start.coste_f = start.coste_g + start.coste_h;
       start.secuencia.push_back({f_bel, c_bel, op});
 
@@ -846,10 +850,20 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
     if (terreno[current.estado.f][current.estado.c] == 'U') return current.secuencia;
 
     // Control de explorados
-    auto it = explored.find(current.estado);
-    if (it != explored.end() and it->second <= current.coste_g) continue;
-    explored[current.estado] = current.coste_g;
+    bool dominado = false;
+    for (const auto &hist : explored[current.estado]) {
+      // Si ya hemos visitado este estado con menor o igual coste, energía y ecología, este camino no vale la pena
+      if (hist.g <= current.coste_g and hist.energia <= current.energia_gastada and hist.eco <= current.eco_acumulado) {
+        dominado = true;
+        break;
+      }
+    }
+    if (dominado) continue; // lo podamos
 
+    // Si sobrevive, lo registramos en el historial de este estado
+    explored[current.estado].push_back({current.coste_g, current.energia_gastada, current.eco_acumulado});
+
+    
     // Generamos hijos (next)
     for (int i=0; i<4; i++) {
       int n_f = current.estado.f + df[i];
@@ -882,12 +896,11 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
             if (child.energia_gastada > max_energia or child.eco_acumulado > max_eco) continue;
 
             child.coste_g += 1;
-            child.coste_h = HeuristicaTubo(n_f, n_c, terreno);
+            child.coste_h = HeuristicaTubo(n_f, n_c, plantas_U);
             child.coste_f = child.coste_g + child.coste_h;
             child.secuencia.push_back({n_f, n_c, n_op});
 
-            auto it_child = explored.find(child.estado);
-            if (it_child == explored.end() or child.coste_g < it_child->second) frontier.push(child);
+            frontier.push(child);
           }
         }
       }

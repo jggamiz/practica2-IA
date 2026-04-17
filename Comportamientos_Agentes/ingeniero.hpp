@@ -39,6 +39,13 @@ struct NodoI {
   }
 };
 
+// Estructura para guardar el historial de recursos con los que llegamos a un nodo
+struct InfoTrayecto {
+  int g;
+  int energia;
+  int eco;
+};
+
 struct EstadoTubo {
   int f;
   int c;
@@ -82,7 +89,7 @@ struct NodoTubo {
     if (coste_f == node.coste_f and eco_acumulado > node.eco_acumulado) return true;
 
     // En caso de empate, preferimos el que ha gastado menos energía
-    if (coste_f == node.coste_f and eco_acumulado == node.eco_acumulado and eco_acumulado > node.eco_acumulado) return true;
+    if (coste_f == node.coste_f and eco_acumulado == node.eco_acumulado and energia_gastada > node.energia_gastada) return true;
     
     return false;
   }
