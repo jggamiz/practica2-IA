@@ -522,39 +522,40 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_2(Sensores sensores) {
   Action accion = IDLE;
 
   // Buscamos si el ingeniero está en el campo de visión del técnico
-  bool veo_ingeniero = false;
+  int pos_ingeniero = -1;
   for (int i=1; i<sensores.agentes.size(); i++) {
     if (sensores.agentes[i]=='i') {
-      veo_ingeniero = true;
+      pos_ingeniero = i;
       break;
     }
   }
 
-  if (veo_ingeniero) { // Si lo detecta, apartamos al técnico
+  if (pos_ingeniero != -1) { // Si lo detecta, apartamos al técnico
     // Comprobamos si podemos avanzar de frente
     char sup_frente = sensores.superficie[2];
 
     // PUEDO RECUPERAR AQUÍ LA FUNCION CasillaAccesibleTecnico???
+    // ubicacion ub = {sensores.posF, sensores.posC, sensores.rumbo};
+    // EstadoT st = {ub, tiene_zapatillas};
+    // bool puedo_avanzar = CasillaAccesibleTecnico(st, mapaResultado, mapaCotas);
+
     bool check1 = (sup_frente!='M' and sup_frente!='P');
     bool check2 = sup_frente!='B' or (sup_frente=='B' and tiene_zapatillas);
 
     ubicacion ub = {sensores.posF, sensores.posC, sensores.rumbo};
     bool check3= EsAccesiblePorAltura(ub);
     // bool check3 = abs(sensores.cota[0]-sensores.cota[2]) <= 1;
-    if (check1 and check2 and check3)  accion = WALK;     // Cuando ir de frente es seguro
+
+    bool puedo_avanzar = check1 and check2 and check3;
+
+    if (puedo_avanzar and pos_ingeniero != 2 and pos_ingeniero != 6 and pos_ingeniero != 12)
+      accion = WALK; // Cuando ir de frente es seguro y el ingeniero NO está delante
     else {  // Cuando no podemos ir de frente
       // Evaluar opciones laterales
-      bool izq_libre = (sensores.superficie[1] != 'M' && sensores.superficie[1] != 'P' && sensores.agentes[1] == '_');
-      bool der_libre = (sensores.superficie[3] != 'M' && sensores.superficie[3] != 'P' && sensores.agentes[3] == '_');
-
-      if (izq_libre && der_libre) {
-        // Ambos lados transitables: desempatamos con alternancia
-        static int toggle = 0;
-        toggle = !toggle;
-        accion = toggle ? TURN_SL : TURN_SR;
-      } else if (izq_libre) accion = TURN_SL;
-      else if (der_libre) accion = TURN_SR;
-      else  accion = TURN_SL; // giramos a izquierda (por ejemplo) y en el siguiente paso evaluamos otra vez
+      bool ingeniero_izq = (pos_ingeniero == 1 or pos_ingeniero == 4 or pos_ingeniero == 5 or 
+                          (pos_ingeniero >= 9 and pos_ingeniero <= 11));
+      if (ingeniero_izq) accion = TURN_SR;  // Ingeniero a la izquierda, entonces giro a derecha
+      else  accion = TURN_SL; // Ingeniero a la derecha, entonces giro a izquierda
     }
   }
 

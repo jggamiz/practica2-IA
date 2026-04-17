@@ -689,15 +689,15 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
   Action accion = IDLE;
 
   // Buscamos si el técnico está en el campo de visión del ingeniero
-  bool veo_tecnico = false;
+  int pos_tecnico = -1;
   for (int i=1; i<sensores.agentes.size(); i++) {
     if (sensores.agentes[i]=='t') {
-      veo_tecnico = true;
+      pos_tecnico = i;
       break;
     }
   }
 
-  if (veo_tecnico) { // Si lo detecta, apartamos al ingeniero
+  if (pos_tecnico != -1) { // Si lo detecta, apartamos al ingeniero
     // Comprobamos si podemos avanzar de frente
     char sup_frente = sensores.superficie[2];
     bool check1 = (sup_frente != 'M' and sup_frente != 'P' and sensores.agentes[2] == '_');
@@ -705,20 +705,17 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_3(Sensores sensores
     ubicacion ub = {sensores.posF, sensores.posC, sensores.rumbo};
     bool check2 = EsAccesiblePorAltura(ub ,tiene_zapatillas);
 
-    if (check1 and check2) accion = WALK; // Cuando ir de frente es seguro
+    bool puedo_avanzar = check1 and check2;
+
+    if (puedo_avanzar and pos_tecnico != 2 and pos_tecnico != 6 and pos_tecnico != 12) 
+      accion = WALK; // Cuando ir de frente es seguro y el técnico NO está justo en nuestro camino
     else { // Cuando no podemos ir de frente
       // Evaluar opciones laterales
-      bool izq_libre = (sensores.superficie[1] != 'M' && sensores.superficie[1] != 'P' && sensores.agentes[1] == '_');
-      bool der_libre = (sensores.superficie[3] != 'M' && sensores.superficie[3] != 'P' && sensores.agentes[3] == '_');
-
-      if (izq_libre && der_libre) {
-        // Ambos lados transitables: desempatamos con alternancia
-        static int toggle = 0;
-        toggle = !toggle;
-        accion = toggle ? TURN_SL : TURN_SR;
-      } else if (izq_libre) accion = TURN_SL;
-      else if (der_libre) accion = TURN_SR;
-      else  accion = TURN_SL; // giramos a izquierda (por ejemplo) y en el siguiente paso evaluamos otra vez
+      // Identificamos si el técnico está en la mitad izquierda de nuestra visión:
+      bool tecnico_izq = (pos_tecnico == 1 or pos_tecnico == 4 or pos_tecnico == 5 or 
+                          (pos_tecnico >= 9 and pos_tecnico <= 11));
+      if (tecnico_izq) accion = TURN_SR;  // Técnico a la izquierda, entonces giro a derecha
+      else  accion = TURN_SL; // Técnico a la derecha, entonces giro a izquierda
     }
   }
 
