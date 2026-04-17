@@ -85,12 +85,17 @@ struct NodoTubo {
     // el nodo con el MENOR coste de tiempo (es decir que estamos simulando una min-heap)
     if (coste_f > node.coste_f) return true;
 
-    // En caso de que tengan el mismo coste total, preferimos el que ha gastado menos impacto ecológico
-    if (coste_f == node.coste_f and eco_acumulado > node.eco_acumulado) return true;
+    if (coste_f == node.coste_f) {
+      // A igual coste total, preferimos mayor g (estamos más cerca de la meta y reducimos la heurística)
+      if (coste_g < node.coste_g) return true;
 
-    // En caso de empate, preferimos el que ha gastado menos energía
-    if (coste_f == node.coste_f and eco_acumulado == node.eco_acumulado and energia_gastada > node.energia_gastada) return true;
-    
+      // En caso de que tengan el mismo coste g, preferimos el que ha gastado menos impacto ecológico
+      if (coste_g == node.coste_g and eco_acumulado > node.eco_acumulado) return true;
+
+      // En caso de empate, preferimos el que ha gastado menos energía
+      if (coste_g == node.coste_g and eco_acumulado == node.eco_acumulado and energia_gastada > node.energia_gastada) return true;
+    }
+
     return false;
   }
 };
