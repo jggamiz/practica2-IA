@@ -215,41 +215,28 @@ int VeoCasillaInteresanteT(char i, char c, char d, bool zap, int cnt_i, int cnt_
   if (i == 'U') return 1;
   if (d == 'U') return 3;
 
-  // Zapatillas: solo si no las tenemos aún
-  if (!zap) {
-    int mejor = -1, min_cnt = INT16_MAX;
-    if (c == 'D' && cnt_c < min_cnt) {
-      min_cnt = cnt_c;
-      mejor = 2;
-    }
-    if (c == 'D' && cnt_i < min_cnt) {
-      min_cnt = cnt_i;
-      mejor = 1;
-    }
-    if (c == 'D' && cnt_d < min_cnt) {
-      min_cnt = cnt_d;
-      mejor = 3;
-    }
-    if (mejor != -1) return mejor;
-  }
-
-  // Caminos: la casilla 'C' menos visitada
+  // Caminos: la casilla 'C' o 'D' menos visitada
+  // Tratamos 'D' como camino normal para poder huir por ahí si nos hiciera falta
+  // En este caso, como solo podemos pasar por casillas 'C', 'U' o 'D', las zapatillas no le sirven
+  // al técnico para nada, pues las casillas 'B' seguirán siendo intransitables
   int mejor = -1, min_cnt = INT16_MAX;
-  if (c == 'C' && cnt_c < min_cnt) {
+  bool transitable_c = (c == 'C' or c =='D');
+  bool transitable_i = (i == 'C' or i =='D');
+  bool transitable_d = (d == 'C' or d =='D');
+
+  if (transitable_c and cnt_c < min_cnt) {
     min_cnt = cnt_c;
     mejor = 2;
   }
-  if (i == 'C' && cnt_i < min_cnt) {
+  if (transitable_i and cnt_i < min_cnt) {
     min_cnt = cnt_i;
     mejor = 1;
   }
-  if (d == 'C' && cnt_d < min_cnt) {
+  if (transitable_d and cnt_d < min_cnt) {
     min_cnt = cnt_d;
     mejor = 3;
   }
   if (mejor != -1) return mejor;
-
-  return 0;
 
   /*
   // Bosque ('B'): solo si tiene zapatillas
@@ -271,6 +258,7 @@ int VeoCasillaInteresanteT(char i, char c, char d, bool zap, int cnt_i, int cnt_
   }
   */
 
+  // Resto de casillas: 'P', 'M', 'A', 'H', 'S', 'B', etc.
   return 0;
 }
 
