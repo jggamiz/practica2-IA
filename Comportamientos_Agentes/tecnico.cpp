@@ -251,6 +251,7 @@ int VeoCasillaInteresanteT(char i, char c, char d, bool zap, int cnt_i, int cnt_
 
   return 0;
 
+  /*
   // Bosque ('B'): solo si tiene zapatillas
   if (zap) {
     int mejor = -1, min_cnt = INT16_MAX;
@@ -268,6 +269,7 @@ int VeoCasillaInteresanteT(char i, char c, char d, bool zap, int cnt_i, int cnt_
     }
     if (mejor != -1) return mejor;
   }
+  */
 
   return 0;
 }
@@ -314,11 +316,17 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
   int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
 
-  // 3. Filtro por altura
+  // 3. Ignorar casillas con agente ingeniero
+  // Si vemos al ingeniero, tratamos esa casilla como un obstáculo insalvable ('P')
+  char cas_i = (sensores.agentes[1] == 'i') ? 'P' : sensores.superficie[1];
+  char cas_c = (sensores.agentes[2] == 'i') ? 'P' : sensores.superficie[2];
+  char cas_d = (sensores.agentes[3] == 'i') ? 'P' : sensores.superficie[3];
+
+  // 4. Filtro por altura
   int cota = sensores.cota[0];
-  char i = ViablePorAlturaT(sensores.superficie[1], sensores.cota[1]-cota);
-  char c = ViablePorAlturaT(sensores.superficie[2], sensores.cota[2]-cota);
-  char d = ViablePorAlturaT(sensores.superficie[3], sensores.cota[3]-cota);
+  char i = ViablePorAlturaT(cas_i, sensores.cota[1]-cota);
+  char c = ViablePorAlturaT(cas_c, sensores.cota[2]-cota);
+  char d = ViablePorAlturaT(cas_d, sensores.cota[3]-cota);
 
   int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas, cnt_i, cnt_c, cnt_d);
 
