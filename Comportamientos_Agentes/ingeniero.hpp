@@ -100,6 +100,16 @@ struct NodoTubo {
   }
 };
 
+enum EstadoIngeniero {
+  ENG_PLANIFICAR_RED,
+  ENG_INIT_TRAMO,
+  ENG_IR_A_TECH,
+  ENG_PREPARAR_TECH,
+  ENG_LLAMAR_TECH,
+  ENG_IR_A_ENG,
+  ENG_PREPARAR_ENG,
+  ENG_ESPERAR_SYNC
+};
 
 
 class ComportamientoIngeniero : public Comportamiento {
@@ -132,6 +142,7 @@ public:
     // Inicializar Variables de Estado
     hayPlan = false;
     tiene_zapatillas = false;
+    estado_eng = ENG_PLANIFICAR_RED;
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -314,6 +325,10 @@ map<pair<int,int>, int> visitadas;
 
 bool hayPlan;            // Indica si hay una plan que ejecutar
 list<Action> plan;       // Almacena el plan a realizar.
+
+EstadoIngeniero estado_eng;
+Paso casilla_eng;
+Paso casilla_tech;
 };
 
 #endif

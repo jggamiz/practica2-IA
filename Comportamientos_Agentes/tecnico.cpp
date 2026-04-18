@@ -804,6 +804,57 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
+  
+  switch (estado_tech)
+  {
+  case TECH_IDLE: {
+    if (sensores.venpaca) {
+      estado_tech = TECH_IR_A_DESTINO;
+      plan.clear();
+    }
+    return IDLE;
+  }
+
+  case TECH_IR_A_DESTINO: {
+    if (sensores.posF == sensores.GotoF and sensores.posC == sensores.GotoC) {
+      plan.clear();
+      estado_tech = TECH_ORIENTAR;
+      return IDLE;
+    }
+
+    if (plan.empty()) {
+      EstadoT inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoT final = {sensores.GotoF, sensores.GotoC, norte};
+      plan = A_Star(inicio, final, mapaResultado, mapaCotas);
+    }
+
+    if (!plan.empty()) {
+      Action a = plan.front();
+      plan.pop_front();
+      return a;
+    }
+
+    return IDLE;
+  }
+
+  case TECH_ORIENTAR: {
+    if (sensores.enfrente) {
+      estado_tech = TECH_ESPERAR_SYNC;
+      return IDLE;
+    }
+    return TURN_SR;
+  }
+
+  case TECH_ESPERAR_SYNC: {
+    if (sensores.enfrente) {
+      estado_tech = TECH_IDLE;
+      return INSTALL;
+    }
+    estado_tech = TECH_ORIENTAR;
+    return IDLE;
+  }
+  }
+  
   return IDLE;
 }
 // --------------------------------------------------------------------------------

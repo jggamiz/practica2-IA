@@ -67,6 +67,14 @@ struct NodoT {
   */
 };
 
+enum EstadoTecnico {
+  TECH_IDLE,
+  TECH_IR_A_DESTINO,
+  TECH_ORIENTAR,
+  TECH_ESPERAR_SYNC
+};
+
+
 // =========================================================================
 // DOCUMENTACIÓN PARA ESTUDIANTES
 // =========================================================================
@@ -108,6 +116,7 @@ public:
     // Inicializar Variables de Estado
     hayPlan = false;
     tiene_zapatillas = false;
+    estado_tech = TECH_IDLE;
   }
 
   ComportamientoTecnico(const ComportamientoTecnico &comport): Comportamiento(comport) {}
@@ -311,6 +320,8 @@ map<pair<int,int>, int> visitadas;
 // Nivel E
 bool hayPlan;            // Indica si hay una plan que ejecutar
 list<Action> plan;       // Almacena el plan a realizar.
+
+EstadoTecnico estado_tech;
 };
 
 #endif

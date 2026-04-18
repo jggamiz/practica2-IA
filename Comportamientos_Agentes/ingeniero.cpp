@@ -982,6 +982,124 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores)
 {
+  switch (estado_eng)
+  {
+  case ENG_PLANIFICAR_RED: {
+    // Extraemos los datos del mundo
+    int max_energia = sensores.energia;
+    int max_eco = sensores.max_ecologico;
+    int f_bel = sensores.BelPosF;
+    int c_bel = sensores.BelPosC;
+
+    // Ejecutamos el plan (nivel 4)
+    listaCanalizacionTuberias = PlanificarTuberias_AStar(f_bel, c_bel, max_energia, max_eco, mapaResultado, mapaCotas);
+
+    // Si el plan ha sido exitoso (no es vacío), pasamos a fase de ejecución
+    if (!listaCanalizacionTuberias.empty()) estado_eng = ENG_INIT_TRAMO;
+
+    return IDLE; // gastamos este turno en pensar
+  }
+
+  case ENG_INIT_TRAMO: {
+    // Si nos quedamos con menos de dos casillas, hemos terminado el plan
+    if (listaCanalizacionTuberias.size() < 2) return IDLE;
+
+    // Extraemos las dos siguientes casillas
+    auto it = listaCanalizacionTuberias.begin();
+    Paso c1 = *it;
+    Paso c2 = *next(it);
+
+    // Desempate de alturas
+    int alt1 = (mapaCotas[c1.fil][c1.col] - '0') + c1.op;
+    int alt2 = (mapaCotas[c2.fil][c2.col] - '0') + c2.op;
+
+    if (alt1 <= alt2+1) {
+      casilla_eng = c1;
+      casilla_tech = c2;
+    } else {
+      casilla_eng = c2;
+      casilla_tech = c1;
+    }
+
+    estado_eng = ENG_IR_A_TECH;
+    plan.clear();
+    return IDLE;
+  }
+
+  case ENG_IR_A_TECH: {
+    if (sensores.posF == casilla_tech.fil and sensores.posC == casilla_tech.col) {
+      plan.clear();
+      estado_eng = ENG_PREPARAR_TECH;
+      return IDLE;
+    }
+
+    if (plan.empty()) {
+      EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
+      plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
+    }
+
+    if (!plan.empty()) {
+      Action a = plan.front();
+      plan.pop_front();
+      return a;
+    }
+
+    return IDLE;
+  }
+
+  case ENG_PREPARAR_TECH: {
+    estado_eng = ENG_LLAMAR_TECH;
+    if (casilla_tech.op == 1) return RAISE;
+    if (casilla_tech.op == -1) return DIG;
+    return COME;
+  }
+
+  case ENG_LLAMAR_TECH: {
+    estado_eng = ENG_IR_A_ENG;
+    plan.clear();
+    return COME;
+  }
+
+  case ENG_IR_A_ENG: {
+    if (sensores.posF == casilla_eng.fil and sensores.posC == casilla_eng.col) {
+      plan.clear();
+      estado_eng = ENG_PREPARAR_ENG;
+      return IDLE;
+    }
+
+    if (plan.empty()) {
+      EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoI final = {casilla_eng.fil, casilla_eng.col, norte};
+      plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
+    }
+
+    if (!plan.empty()) {
+      Action a = plan.front();
+      plan.pop_front();
+      return a;
+    }
+
+    return IDLE;
+  }
+
+  case ENG_PREPARAR_ENG: {
+    estado_eng = ENG_ESPERAR_SYNC;
+    if (casilla_eng.op == 1) return RAISE;
+    if (casilla_eng.op == -1) return DIG;
+    return IDLE;
+  }
+  
+  case ENG_ESPERAR_SYNC: {
+    if (sensores.enfrente) {
+      listaCanalizacionTuberias.pop_front();
+      estado_eng = ENG_INIT_TRAMO;
+      return INSTALL;
+    }
+    return TURN_SR; // Giramos buscando al técnico
+  }
+  }
+
   return IDLE;
 }
 // --------------------------------------------------------------------------------
