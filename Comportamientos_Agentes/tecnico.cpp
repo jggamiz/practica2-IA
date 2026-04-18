@@ -299,10 +299,13 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   auto abs_c = PosAbsolutaSensorT(2, sensores.posF, sensores.posC, sensores.rumbo);
   auto abs_d = PosAbsolutaSensorT(3, sensores.posF, sensores.posC, sensores.rumbo);
 
-  // Almacenamos las casillas visitadas
-  int cnt_i = visitadas.count(abs_i) ? visitadas[abs_i] : 0;
-  int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
-  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
+  // Almacenamos las casillas visitadas. Si estamos girando buscando salida, penalizamos fuertemente las
+  // casillas ya visitadas para que el agente no vuelva por el camino por el que vino hasta completar 360º
+  int umbral = (giros_buscando > 0 and giros_buscando < 8) ? 999999 : 0;
+  
+  int cnt_i = (visitadas.count(abs_i) and visitadas[abs_i] > 0) ? visitadas[abs_i] + umbral : 0;
+  int cnt_c = (visitadas.count(abs_c) and visitadas[abs_c] > 0) ? visitadas[abs_c] + umbral : 0;
+  int cnt_d = (visitadas.count(abs_d) and visitadas[abs_d] > 0) ? visitadas[abs_d] + umbral : 0;
 
   // 3. Ignorar casillas con agente ingeniero
   // Si vemos al ingeniero, tratamos esa casilla como un obstáculo insalvable ('P')
@@ -316,21 +319,25 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_0(Sensores sensores) {
   char c = ViablePorAlturaT(cas_c, sensores.cota[2]-cota);
   char d = ViablePorAlturaT(cas_d, sensores.cota[3]-cota);
 
+  // Toma de decisión
   int pos = VeoCasillaInteresanteT(i, c, d, tiene_zapatillas, cnt_i, cnt_c, cnt_d);
 
-  switch (pos) {
-  case 2:
+  switch(pos) {
+    case 2:
       accion = WALK;
+      giros_buscando = 0;
       break;
     case 1:
       accion = TURN_SL;
+      giros_buscando = 0;
       break;
     case 3:
       accion = TURN_SR;
+      giros_buscando = 0;
       break;
     default:
+      giros_buscando++;
       accion = TURN_SL;
-      break;
   }
 
   // Devolver la siguiente acción a hacer

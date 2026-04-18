@@ -383,9 +383,19 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   auto abs_d = PosAbsolutaSensorI(3, sensores.posF, sensores.posC, sensores.rumbo);
 
   // Almacenamos las casillas visitadas
+  /*
   int cnt_i = visitadas.count(abs_i) ? visitadas[abs_i] : 0;
   int cnt_c = visitadas.count(abs_c) ? visitadas[abs_c] : 0;
-  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;
+  int cnt_d = visitadas.count(abs_d) ? visitadas[abs_d] : 0;*/
+  
+  // Almacenamos las casillas visitadas. Si estamos girando buscando salida, penalizamos fuertemente las
+  // casillas ya visitadas para que el agente no vuelva por el camino por el que vino hasta completar 360º
+  int umbral = (giros_buscando > 0 and giros_buscando < 8) ? 999999 : 0;
+  
+  int cnt_i = (visitadas.count(abs_i) and visitadas[abs_i] > 0) ? visitadas[abs_i] + umbral : 0;
+  int cnt_c = (visitadas.count(abs_c) and visitadas[abs_c] > 0) ? visitadas[abs_c] + umbral : 0;
+  int cnt_d = (visitadas.count(abs_d) and visitadas[abs_d] > 0) ? visitadas[abs_d] + umbral : 0;
+
 
   // 4. Comprobamos que el técnico no esté en las diagonales
   char cas_i = (sensores.agentes[1] == 't') ? 'P' : sensores.superficie[1];
@@ -403,18 +413,19 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_1(Sensores sensores
   switch(pos) {
     case 2:
       accion = WALK;
+      giros_buscando = 0;
       break;
     case 1:
-      accion = TURN_SL; // Avanzamos en diagonal izquierda
+      accion = TURN_SL;
+      giros_buscando = 0;
       break;
     case 3:
-      accion = TURN_SR; // Avanzamos en diagonal derecha
+      accion = TURN_SR;
+      giros_buscando = 0;
       break;
     default:
-      // Si nos hemos metido en un rincón donde ni recto ni diagonales son transitables,
-      // forzamos un giro de 90º para darnos la vuelta poco a poco
+      giros_buscando++;
       accion = TURN_SL;
-      // giro45Izq = 1; 
       break;
   }
 
