@@ -1041,34 +1041,45 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
   case ENG_IR_A_TECH: {
     if (sensores.choque) {
-
       // Calculamos dónde está el obstáculo
       int f_obst = sensores.posF, c_obst = sensores.posC;
       switch (sensores.rumbo)
       {
-      case norte: f_obst--; break;
-      case noreste: f_obst--; c_obst++; break;
-      case este: c_obst++; break;
-      case sureste: f_obst++; c_obst++; break;
-      case sur: f_obst++; break;
-      case suroeste: f_obst++; c_obst--; break;
-      case oeste: c_obst--; break;
-      case noroeste: f_obst--; c_obst--; break;
+        case norte: f_obst--; break;
+        case noreste: f_obst--; c_obst++; break;
+        case este: c_obst++; break;
+        case sureste: f_obst++; c_obst++; break;
+        case sur: f_obst++; break;
+        case suroeste: f_obst++; c_obst--; break;
+        case oeste: c_obst--; break;
+        case noroeste: f_obst--; c_obst--; break;
       }
 
       // Si el obstáculo es nuestro destino final esperamos
-      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) return IDLE;
+      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) {
+        plan.clear();
+        return COME;
+      }
+
+      if (sensores.posF == casilla_tech.fil && sensores.posC == casilla_tech.col) {
+        plan.clear();
+        estado_eng = ENG_PREPARAR_TECH;
+        return IDLE;
+      }
 
       // Marcamos la casilla con 'M' temporalmente
-      unsigned char original = mapaResultado[f_obst][c_obst];
+      unsigned char orig1 = mapaResultado[f_obst][c_obst];
+      // unsigned char orig2 = mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col];
       mapaResultado[f_obst][c_obst] = 'M';
+      // mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col] = 'M';
 
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
       plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
 
       // Restauramos el mapa
-      mapaResultado[f_obst][c_obst] = original;
+      mapaResultado[f_obst][c_obst] = orig1;
+      //mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col] = orig2;
 
       if (!plan.empty()) {
         Action a = plan.front();
@@ -1131,7 +1142,10 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
       }
 
       // Si el obstáculo es nuestro destino final esperamos
-      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) return IDLE;
+      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) {
+        plan.clear();
+        return COME;
+      }
 
       // Marcamos la casilla con 'M' temporalmente
       unsigned char original = mapaResultado[f_obst][c_obst];
@@ -1185,11 +1199,17 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     // Debemos determinar la posición de la casilla del técnico con respecto a la del ingeniero
     Orientacion orient = RumboHacia(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
     
-    if (sensores.rumbo != orient) return TURN_SR; // Giramos buscando al técnico
+    // Giramos buscando al técnico por el "rumbo más corto"
+    if (sensores.rumbo != orient) {
+      int diff = ((int)orient - (int)sensores.rumbo + 8) % 8;
+      return (diff <= 4) ? TURN_SR : TURN_SL;
+    }
 
     if (sensores.enfrente) {
+      //prev_casilla_tech = casilla_tech;
       listaCanalizacionTuberias.pop_front();
       estado_eng = ENG_INIT_TRAMO;
+      //estado_eng = ENG_ALEJAR_TECH;
       return INSTALL;
     }
 

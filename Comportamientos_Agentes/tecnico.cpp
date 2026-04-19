@@ -835,7 +835,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
       }
 
       // Si el obstáculo es nuestro destino final esperamos
-      if (f_obst == destino_f and c_obst == destino_f) return IDLE;
+      if (f_obst == destino_f and c_obst == destino_c) {
+        plan.clear();
+        return IDLE;
+      }
 
       // Marcamos la casilla con 'M' temporalmente
       unsigned char original = mapaResultado[f_obst][c_obst];

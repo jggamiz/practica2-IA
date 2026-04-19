@@ -329,6 +329,7 @@ list<Action> plan;       // Almacena el plan a realizar.
 EstadoIngeniero estado_eng;
 Paso casilla_eng;
 Paso casilla_tech;
+// Paso prev_casilla_tech;
 };
 
 #endif
