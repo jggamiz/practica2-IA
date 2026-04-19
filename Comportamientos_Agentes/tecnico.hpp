@@ -70,8 +70,7 @@ struct NodoT {
 enum EstadoTecnico {
   TECH_IDLE,
   TECH_IR_A_DESTINO,
-  TECH_ORIENTAR,
-  TECH_ESPERAR_SYNC
+  TECH_ORIENTAR
 };
 
 
@@ -117,6 +116,8 @@ public:
     hayPlan = false;
     tiene_zapatillas = false;
     estado_tech = TECH_IDLE;
+    destino_f = -1;
+    destino_c = -1;
   }
 
   ComportamientoTecnico(const ComportamientoTecnico &comport): Comportamiento(comport) {}
@@ -322,6 +323,7 @@ bool hayPlan;            // Indica si hay una plan que ejecutar
 list<Action> plan;       // Almacena el plan a realizar.
 
 EstadoTecnico estado_tech;
+int destino_f, destino_c;
 };
 
 #endif

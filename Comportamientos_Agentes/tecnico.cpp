@@ -809,6 +809,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
   {
   case TECH_IDLE: {
     if (sensores.venpaca) {
+      destino_f = sensores.GotoF;
+      destino_c = sensores.GotoC;
       estado_tech = TECH_IR_A_DESTINO;
       plan.clear();
     }
@@ -816,7 +818,46 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
   }
 
   case TECH_IR_A_DESTINO: {
-    if (sensores.posF == sensores.GotoF and sensores.posC == sensores.GotoC) {
+    if (sensores.choque) {
+
+      // Calculamos dónde está el obstáculo
+      int f_obst = sensores.posF, c_obst = sensores.posC;
+      switch (sensores.rumbo)
+      {
+      case norte: f_obst--; break;
+      case noreste: f_obst--; c_obst++; break;
+      case este: c_obst++; break;
+      case sureste: f_obst++; c_obst++; break;
+      case sur: f_obst++; break;
+      case suroeste: f_obst++; c_obst--; break;
+      case oeste: c_obst--; break;
+      case noroeste: f_obst--; c_obst--; break;
+      }
+
+      // Si el obstáculo es nuestro destino final esperamos
+      if (f_obst == destino_f and c_obst == destino_f) return IDLE;
+
+      // Marcamos la casilla con 'M' temporalmente
+      unsigned char original = mapaResultado[f_obst][c_obst];
+      mapaResultado[f_obst][c_obst] = 'M';
+
+      EstadoT inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoT final = {destino_f, destino_c, norte};
+      plan = A_Star(inicio, final, mapaResultado, mapaCotas);
+
+      // Restauramos el mapa
+      mapaResultado[f_obst][c_obst] = original;
+
+      if (!plan.empty()) {
+        Action a = plan.front();
+        plan.pop_front();
+        return a;
+      }
+      
+      return IDLE;
+    }
+    
+    if (sensores.posF == destino_f and sensores.posC == destino_c) {
       plan.clear();
       estado_tech = TECH_ORIENTAR;
       return IDLE;
@@ -824,7 +865,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 
     if (plan.empty()) {
       EstadoT inicio = {sensores.posF, sensores.posC, sensores.rumbo};
-      EstadoT final = {sensores.GotoF, sensores.GotoC, norte};
+      EstadoT final = {destino_f, destino_c, norte};
       plan = A_Star(inicio, final, mapaResultado, mapaCotas);
     }
 
@@ -839,19 +880,10 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 
   case TECH_ORIENTAR: {
     if (sensores.enfrente) {
-      estado_tech = TECH_ESPERAR_SYNC;
-      return IDLE;
-    }
-    return TURN_SR;
-  }
-
-  case TECH_ESPERAR_SYNC: {
-    if (sensores.enfrente) {
       estado_tech = TECH_IDLE;
       return INSTALL;
     }
-    estado_tech = TECH_ORIENTAR;
-    return IDLE;
+    return TURN_SR;
   }
   }
   

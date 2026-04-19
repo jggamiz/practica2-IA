@@ -1027,6 +1027,45 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
   }
 
   case ENG_IR_A_TECH: {
+    if (sensores.choque) {
+
+      // Calculamos dónde está el obstáculo
+      int f_obst = sensores.posF, c_obst = sensores.posC;
+      switch (sensores.rumbo)
+      {
+      case norte: f_obst--; break;
+      case noreste: f_obst--; c_obst++; break;
+      case este: c_obst++; break;
+      case sureste: f_obst++; c_obst++; break;
+      case sur: f_obst++; break;
+      case suroeste: f_obst++; c_obst--; break;
+      case oeste: c_obst--; break;
+      case noroeste: f_obst--; c_obst--; break;
+      }
+
+      // Si el obstáculo es nuestro destino final esperamos
+      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) return IDLE;
+
+      // Marcamos la casilla con 'M' temporalmente
+      unsigned char original = mapaResultado[f_obst][c_obst];
+      mapaResultado[f_obst][c_obst] = 'M';
+
+      EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
+      plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
+
+      // Restauramos el mapa
+      mapaResultado[f_obst][c_obst] = original;
+
+      if (!plan.empty()) {
+        Action a = plan.front();
+        plan.pop_front();
+        return a;
+      }
+
+      return IDLE;
+    }
+
     if (sensores.posF == casilla_tech.fil and sensores.posC == casilla_tech.col) {
       plan.clear();
       estado_eng = ENG_PREPARAR_TECH;
@@ -1052,7 +1091,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     estado_eng = ENG_LLAMAR_TECH;
     if (casilla_tech.op == 1) return RAISE;
     if (casilla_tech.op == -1) return DIG;
-    return COME;
+    return IDLE;
   }
 
   case ENG_LLAMAR_TECH: {
@@ -1062,6 +1101,45 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
   }
 
   case ENG_IR_A_ENG: {
+    if (sensores.choque) {
+
+      // Calculamos dónde está el obstáculo
+      int f_obst = sensores.posF, c_obst = sensores.posC;
+      switch (sensores.rumbo)
+      {
+      case norte: f_obst--; break;
+      case noreste: f_obst--; c_obst++; break;
+      case este: c_obst++; break;
+      case sureste: f_obst++; c_obst++; break;
+      case sur: f_obst++; break;
+      case suroeste: f_obst++; c_obst--; break;
+      case oeste: c_obst--; break;
+      case noroeste: f_obst--; c_obst--; break;
+      }
+
+      // Si el obstáculo es nuestro destino final esperamos
+      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) return IDLE;
+
+      // Marcamos la casilla con 'M' temporalmente
+      unsigned char original = mapaResultado[f_obst][c_obst];
+      mapaResultado[f_obst][c_obst] = 'M';
+
+      EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
+      EstadoI final = {casilla_eng.fil, casilla_eng.col, norte};
+      plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
+
+      // Restauramos el mapa
+      mapaResultado[f_obst][c_obst] = original;
+
+      if (!plan.empty()) {
+        Action a = plan.front();
+        plan.pop_front();
+        return a;
+      }
+      
+      return IDLE;
+    }
+
     if (sensores.posF == casilla_eng.fil and sensores.posC == casilla_eng.col) {
       plan.clear();
       estado_eng = ENG_PREPARAR_ENG;
