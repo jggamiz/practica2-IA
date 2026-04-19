@@ -975,6 +975,19 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
 // ================================================================================
 // --------------------------------------------------------------------------------
 // NIVEL 5
+
+/**
+ * @brief Comprueba si desde (f1,c1) con orientación rumbo se apunta a (f2,c2)
+ * @note Asume adyacencia ortogonal ya verificada
+ */
+Orientacion RumboHacia(int f1, int c1, int f2, int c2) {
+  if (f1 > f2) return norte;
+  if (f1 < f2) return sur;
+  if (c1 > c2) return oeste;
+  if (c1 < c2) return este;
+  return norte;
+}
+
 /**
  * @brief Comportamiento del ingeniero para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
@@ -1169,12 +1182,18 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
   }
   
   case ENG_ESPERAR_SYNC: {
+    // Debemos determinar la posición de la casilla del técnico con respecto a la del ingeniero
+    Orientacion orient = RumboHacia(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
+    
+    if (sensores.rumbo != orient) return TURN_SR; // Giramos buscando al técnico
+
     if (sensores.enfrente) {
       listaCanalizacionTuberias.pop_front();
       estado_eng = ENG_INIT_TRAMO;
       return INSTALL;
     }
-    return TURN_SR; // Giramos buscando al técnico
+
+    return IDLE; 
   }
   }
 
