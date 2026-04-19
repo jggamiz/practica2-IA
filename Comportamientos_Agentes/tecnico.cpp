@@ -840,6 +840,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
         return IDLE;
       }
 
+      /*
       // Marcamos la casilla con 'M' temporalmente
       unsigned char original = mapaResultado[f_obst][c_obst];
       mapaResultado[f_obst][c_obst] = 'M';
@@ -855,8 +856,9 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
         Action a = plan.front();
         plan.pop_front();
         return a;
-      }
+      }*/
       
+      plan.clear();
       return IDLE;
     }
     

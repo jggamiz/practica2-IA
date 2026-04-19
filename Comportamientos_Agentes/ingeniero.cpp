@@ -1022,7 +1022,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     Paso c1 = *it;
     Paso c2 = *next(it);
 
-    // Desempate de alturas
+    /*
+    // Desempate de alturas (no sé si es necesario)
     int alt1 = (mapaCotas[c1.fil][c1.col] - '0') + c1.op;
     int alt2 = (mapaCotas[c2.fil][c2.col] - '0') + c2.op;
 
@@ -1032,7 +1033,9 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     } else {
       casilla_eng = c2;
       casilla_tech = c1;
-    }
+    }*/
+    casilla_eng = c2;
+    casilla_tech = c1;
 
     estado_eng = ENG_IR_A_TECH;
     plan.clear();
@@ -1058,10 +1061,11 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
       // Si el obstáculo es nuestro destino final esperamos
       if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) {
         plan.clear();
-        return COME;
+        estado_eng = ENG_PREPARAR_TECH;
+        return IDLE;
       }
 
-      if (sensores.posF == casilla_tech.fil && sensores.posC == casilla_tech.col) {
+      if (sensores.posF == casilla_tech.fil and sensores.posC == casilla_tech.col) {
         plan.clear();
         estado_eng = ENG_PREPARAR_TECH;
         return IDLE;
@@ -1142,9 +1146,9 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
       }
 
       // Si el obstáculo es nuestro destino final esperamos
-      if (f_obst == casilla_tech.fil and c_obst == casilla_tech.col) {
+      if (f_obst == casilla_eng.fil and c_obst == casilla_eng.col) {
         plan.clear();
-        return COME;
+        return IDLE;
       }
 
       // Marcamos la casilla con 'M' temporalmente
