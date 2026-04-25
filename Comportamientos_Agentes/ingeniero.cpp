@@ -1202,82 +1202,32 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
   case ENG_ESPERAR_SYNC: {
     // Debemos determinar la posición de la casilla del técnico con respecto a la del ingeniero
     Orientacion orient = RumboHaciaI(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
-    
+      
     // Giramos buscando al técnico por el "rumbo más corto"
     if (sensores.rumbo != orient) {
-      //ticks_sync = 0;
       int diff = ((int)orient - (int)sensores.rumbo + 8) % 8;
       return (diff <= 4) ? TURN_SR : TURN_SL;
     }
 
     if (sensores.enfrente) {
-      //ticks_sync = 0;
       listaCanalizacionTuberias.pop_front();
-      estado_eng = ENG_INIT_TRAMO;
+
+      // Inline de ENG_INIT_TRAMO — ahorramos un tick por tramo
+      if (listaCanalizacionTuberias.size() < 2) {
+        estado_eng = ENG_INIT_TRAMO; // estado final, ya no hay más
+      } else {
+        auto it = listaCanalizacionTuberias.begin();
+        casilla_eng = *next(it);
+        casilla_tech = *it;
+        estado_eng = ENG_IR_A_TECH;
+        plan.clear();
+      }
+
       return INSTALL;
     }
-    /*
-    ticks_sync++;
-    if (ticks_sync > 20) {
-      ticks_sync = 0;
-      estado_eng = ENG_CEDER_PASO;
-      plan.clear();
-    }*/
 
-    return IDLE; 
-  }
-  /*
-  case ENG_CEDER_PASO: {
-    if (sensores.posF != casilla_eng.fil or sensores.posC != casilla_eng.col) {
-      // Comprobamos si estamos adyacentes a casilla_tech y mirando hacia ella
-      Orientacion orient = RumboHacia(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
-      int df = abs(sensores.posF - casilla_tech.fil);
-      int dc = abs(sensores.posC - casilla_tech.col);
-
-      bool adyacente = (df <= 1 and dc <= 1 and !(df == 0 and dc == 0));
-
-      if (adyacente) {
-        estado_eng = ENG_ESPERAR_SYNC;
-        plan.clear();
-        return IDLE;
-      }
-    }
-
-    if (plan.empty()) {
-      // Calculamos una celda lateral: perpendicular a la dirección eng→tech
-      int dF = casilla_tech.fil - casilla_eng.fil;
-      int dC = casilla_tech.col - casilla_eng.col;
-
-      // Celda lateral = rotar 90° la dirección eng→tech, adyacente a casilla_tech
-      // Probamos los dos sentidos: (+dC, -dF) y (-dC, +dF)
-      int lat_f1 = casilla_tech.fil + dC;
-      int lat_c1 = casilla_tech.col - dF;
-      int lat_f2 = casilla_tech.fil - dC;
-      int lat_c2 = casilla_tech.col + dF;
-
-      // Elegimos la lateral que esté libre en el mapa
-      int dest_f, dest_c;
-      if (mapaResultado[lat_f1][lat_c1] == ' ' or mapaResultado[lat_f1][lat_c1] == 'S') {
-        dest_f = lat_f1; dest_c = lat_c1; 
-      }
-      else dest_f = lat_f2; dest_c = lat_c2;
-
-      EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
-      EstadoI final  = {dest_f, dest_c, norte};
-      plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
-    }
-
-    if (!plan.empty()) {
-      Action a = plan.front();
-      plan.pop_front();
-      return a;
-    }
-
-    // Si no hay plan posible (raro), volvemos a esperar igualmente
-    estado_eng = ENG_ESPERAR_SYNC;
     return IDLE;
-  }*/
-
+  }
 
   } // switch
 
