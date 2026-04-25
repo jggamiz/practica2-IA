@@ -980,7 +980,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_4(Sensores sensores
  * @brief Comprueba si desde (f1,c1) con orientación rumbo se apunta a (f2,c2)
  * @note Asume adyacencia ortogonal ya verificada
  */
-Orientacion RumboHacia(int f1, int c1, int f2, int c2) {
+Orientacion RumboHaciaI(int f1, int c1, int f2, int c2) {
   if (f1 > f2) return norte;
   if (f1 < f2) return sur;
   if (c1 > c2) return oeste;
@@ -1201,7 +1201,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
   
   case ENG_ESPERAR_SYNC: {
     // Debemos determinar la posición de la casilla del técnico con respecto a la del ingeniero
-    Orientacion orient = RumboHacia(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
+    Orientacion orient = RumboHaciaI(sensores.posF, sensores.posC, casilla_tech.fil, casilla_tech.col);
     
     // Giramos buscando al técnico por el "rumbo más corto"
     if (sensores.rumbo != orient) {

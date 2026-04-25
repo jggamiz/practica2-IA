@@ -799,6 +799,18 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_4(Sensores sensores) {
 // NIVEL 5
 
 /**
+ * @brief Comprueba si desde (f1,c1) con orientación rumbo se apunta a (f2,c2)
+ * @note Asume adyacencia ortogonal ya verificada
+ */
+Orientacion RumboHaciaT(int f1, int c1, int f2, int c2) {
+  if (f1 > f2) return norte;
+  if (f1 < f2) return sur;
+  if (c1 > c2) return oeste;
+  if (c1 < c2) return este;
+  return norte;
+}
+
+/**
  * @brief Comportamiento del técnico para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
  * @return Acción a realizar.
@@ -884,9 +896,12 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 
   case TECH_ORIENTAR: {
     if (sensores.enfrente) {
-      estado_tech = TECH_IDLE;
-      return INSTALL;
+        estado_tech = TECH_IDLE;
+        return INSTALL;
     }
+
+    if (sensores.agentes[2] == 'i') return IDLE;
+
     return TURN_SR;
   }
   
