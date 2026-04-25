@@ -889,7 +889,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
     }
     return TURN_SR;
   }
-  }
+  
+  } // switch
   
   return IDLE;
 }
