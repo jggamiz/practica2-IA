@@ -1205,13 +1205,13 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     
     // Giramos buscando al técnico por el "rumbo más corto"
     if (sensores.rumbo != orient) {
-      ticks_sync = 0;
+      //ticks_sync = 0;
       int diff = ((int)orient - (int)sensores.rumbo + 8) % 8;
       return (diff <= 4) ? TURN_SR : TURN_SL;
     }
 
     if (sensores.enfrente) {
-      ticks_sync = 0;
+      //ticks_sync = 0;
       listaCanalizacionTuberias.pop_front();
       estado_eng = ENG_INIT_TRAMO;
       return INSTALL;
