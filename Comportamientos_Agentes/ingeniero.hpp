@@ -108,7 +108,8 @@ enum EstadoIngeniero {
   ENG_LLAMAR_TECH,
   ENG_IR_A_ENG,
   ENG_PREPARAR_ENG,
-  ENG_ESPERAR_SYNC
+  ENG_ESPERAR_SYNC,
+  ENG_CEDER_PASO
 };
 
 
@@ -143,6 +144,7 @@ public:
     hayPlan = false;
     tiene_zapatillas = false;
     estado_eng = ENG_PLANIFICAR_RED;
+    ticks_sync = 0;
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -330,6 +332,7 @@ EstadoIngeniero estado_eng;
 Paso casilla_eng;
 Paso casilla_tech;
 // Paso prev_casilla_tech;
+int ticks_sync;
 };
 
 #endif
