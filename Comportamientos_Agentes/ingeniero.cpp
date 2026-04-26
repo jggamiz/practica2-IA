@@ -791,8 +791,8 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
       break;
   }
 
-  energia = install_energ;
-  eco = install_eco;
+  energia = install_energ*2;
+  eco = install_eco*2;
 
   if (op == 1) {  // RAISE
     energia += raise_energ;
@@ -1021,6 +1021,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     auto it = listaCanalizacionTuberias.begin();
     Paso c1 = *it;
     Paso c2 = *next(it);
+    casilla_tech_preparada = false; // primer tramo: nadie la ha operado
 
     /*
     // Desempate de alturas (no sé si es necesario)
@@ -1073,9 +1074,7 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
       // Marcamos la casilla con 'M' temporalmente
       unsigned char orig1 = mapaResultado[f_obst][c_obst];
-      // unsigned char orig2 = mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col];
       mapaResultado[f_obst][c_obst] = 'M';
-      // mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col] = 'M';
 
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
@@ -1083,7 +1082,6 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
       // Restauramos el mapa
       mapaResultado[f_obst][c_obst] = orig1;
-      //mapaResultado[prev_casilla_tech.fil][prev_casilla_tech.col] = orig2;
 
       if (!plan.empty()) {
         Action a = plan.front();
@@ -1117,8 +1115,11 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
   case ENG_PREPARAR_TECH: {
     estado_eng = ENG_LLAMAR_TECH;
-    if (casilla_tech.op == 1) return RAISE;
-    if (casilla_tech.op == -1) return DIG;
+    if (!casilla_tech_preparada) { // solo si no fue ya operada
+      if (casilla_tech.op == 1) return RAISE;
+      if (casilla_tech.op == -1) return DIG;
+    }
+    casilla_tech_preparada = false; // reset para el siguiente tramo
     return IDLE;
   }
 
@@ -1130,19 +1131,18 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
   case ENG_IR_A_ENG: {
     if (sensores.choque) {
-
       // Calculamos dónde está el obstáculo
       int f_obst = sensores.posF, c_obst = sensores.posC;
       switch (sensores.rumbo)
       {
-      case norte: f_obst--; break;
-      case noreste: f_obst--; c_obst++; break;
-      case este: c_obst++; break;
-      case sureste: f_obst++; c_obst++; break;
-      case sur: f_obst++; break;
-      case suroeste: f_obst++; c_obst--; break;
-      case oeste: c_obst--; break;
-      case noroeste: f_obst--; c_obst--; break;
+        case norte: f_obst--; break;
+        case noreste: f_obst--; c_obst++; break;
+        case este: c_obst++; break;
+        case sureste: f_obst++; c_obst++; break;
+        case sur: f_obst++; break;
+        case suroeste: f_obst++; c_obst--; break;
+        case oeste: c_obst--; break;
+        case noroeste: f_obst--; c_obst--; break;
       }
 
       // Si el obstáculo es nuestro destino final esperamos
@@ -1212,13 +1212,13 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     if (sensores.enfrente) {
       listaCanalizacionTuberias.pop_front();
 
-      // Inline de ENG_INIT_TRAMO — ahorramos un tick por tramo
       if (listaCanalizacionTuberias.size() < 2) {
         estado_eng = ENG_INIT_TRAMO; // estado final, ya no hay más
       } else {
         auto it = listaCanalizacionTuberias.begin();
         casilla_eng = *next(it);
         casilla_tech = *it;
+        casilla_tech_preparada = true; // ya fue RAISE/DIG como casilla_eng
         estado_eng = ENG_IR_A_TECH;
         plan.clear();
       }

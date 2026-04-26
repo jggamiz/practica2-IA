@@ -144,7 +144,7 @@ public:
     hayPlan = false;
     tiene_zapatillas = false;
     estado_eng = ENG_PLANIFICAR_RED;
-    ticks_sync = 0;
+    casilla_tech_preparada = false;
   }
 
   ComportamientoIngeniero(const ComportamientoIngeniero &comport)
@@ -331,8 +331,7 @@ list<Action> plan;       // Almacena el plan a realizar.
 EstadoIngeniero estado_eng;
 Paso casilla_eng;
 Paso casilla_tech;
-// Paso prev_casilla_tech;
-int ticks_sync;
+bool casilla_tech_preparada;
 };
 
 #endif
