@@ -87,8 +87,15 @@ EstadoT NextCasillaTecnico(const EstadoT &st) {
 bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
                              const vector<vector<unsigned char>> &altura) {
   EstadoT next = NextCasillaTecnico(st);
+
+  // Verificar bounds antes de cualquier acceso
+  if (next.site.f < 0 or next.site.f >= (int)terreno.size() or
+      next.site.c < 0 or next.site.c >= (int)terreno[0].size())
+    return false;
+
   char terr = terreno[next.site.f][next.site.c];
   if (terr == '?') return true; // optimista: asumimos transitable
+
   bool check1 = false, check2=false, check3=false;
   check1 = terr!='P' and terr!='M'; 
   check2 = terr!='B' or (terr=='B' and st.zapatillas);
@@ -454,6 +461,9 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_1(Sensores sensores) {
 
   // Actualizar variables de estado
   if (sensores.superficie[0]=='D') tiene_zapatillas = true;
+
+  // Acutalizamos que estamos visitando esta casilla en el map
+  visitadas[{sensores.posF, sensores.posC}]++;
 
   // 1. Terminar maniobras pendientes
   if (giro45Izq>0) {
@@ -832,6 +842,18 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
   }
 
   case TECH_IR_A_DESTINO: {
+
+    // Antes de ejecutar el siguiente paso del plan, verificamos con los sensores actuales
+    if (!plan.empty() and plan.front() == WALK) {
+      auto pos_frente = PosAbsolutaSensorT(2, sensores.posF, sensores.posC, sensores.rumbo);
+      char terr_actual = mapaResultado[pos_frente.first][pos_frente.second];
+      int diff_altura = abs(sensores.cota[2] - sensores.cota[0]);
+
+      bool peligroso = (terr_actual == 'P') or (diff_altura > 1 && terr_actual != '?');
+      
+      if (peligroso) plan.clear();
+    }
+
     if (sensores.choque) {
       // Calculamos dónde está el obstáculo
       int f_obst = sensores.posF, c_obst = sensores.posC;
