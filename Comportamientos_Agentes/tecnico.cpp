@@ -87,9 +87,11 @@ EstadoT NextCasillaTecnico(const EstadoT &st) {
 bool CasillaAccesibleTecnico(const EstadoT &st, const vector<vector<unsigned char>> &terreno,
                              const vector<vector<unsigned char>> &altura) {
   EstadoT next = NextCasillaTecnico(st);
+  char terr = terreno[next.site.f][next.site.c];
+  if (terr == '?') return true; // optimista: asumimos transitable
   bool check1 = false, check2=false, check3=false;
-  check1 = terreno[next.site.f][next.site.c]!='P' and terreno[next.site.f][next.site.c]!='M'; 
-  check2 = terreno[next.site.f][next.site.c]!='B' or (terreno[next.site.f][next.site.c]=='B' and st.zapatillas);
+  check1 = terr!='P' and terr!='M'; 
+  check2 = terr!='B' or (terr=='B' and st.zapatillas);
   check3 = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]) <= 1;
   
   return check1 and check2 and check3;
@@ -926,7 +928,26 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
  * @return Acción a realizar.
  */
 Action ComportamientoTecnico::ComportamientoTecnicoNivel_6(Sensores sensores) {
-  return IDLE;
+  // Durante la exploración, nivel 1 llama a ActualizarMapa internamente
+  // En el resto de estados lo llamamos aquí
+  if (estado_tech != TECH_IDLE) ActualizarMapa(sensores);
+
+  switch (estado_tech) {
+  case TECH_IDLE:
+    if (sensores.venpaca) {
+      destino_f = sensores.GotoF;
+      destino_c = sensores.GotoC;
+      estado_tech = TECH_IR_A_DESTINO;
+      plan.clear();
+      return IDLE;
+    }
+
+    // Explorar con nivel 1
+    return ComportamientoTecnicoNivel_1(sensores);
+  
+  default:
+    return ComportamientoTecnicoNivel_5(sensores);
+  }
 }
 // --------------------------------------------------------------------------------
 // ================================================================================

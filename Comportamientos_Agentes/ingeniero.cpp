@@ -499,6 +499,7 @@ bool CasillaAccesibleIngeniero(const EstadoI &st, Action accion, const vector<ve
   // Si la acción es WALK
   if (accion==WALK) {
     char terr = terreno[next.site.f][next.site.c];
+    if (terr == '?') return true;
     if (terr=='M' or terr=='P' or terr=='B') return false; // intransitables
 
     int diff = abs(altura[st.site.f][st.site.c]-altura[next.site.f][next.site.c]);
@@ -783,7 +784,7 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
       install_energ = 25, install_eco = 25;
       raise_energ = 30, raise_eco = 30;
       dig_energ = 40, dig_eco = 40;
-      break;      
+      break;
     case 'C': case 'U':
       install_energ = 15, install_eco = 15;
       raise_energ = 10, raise_eco = 10;
@@ -791,7 +792,7 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
       break;
   }
 
-  energia = install_energ*2;
+  energia = install_energ*2; // no estoy seguro del *2
   eco = install_eco*2;
 
   if (op == 1) {  // RAISE
@@ -807,6 +808,7 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
  * @brief Comprueba si la operación de altura es válida en el terreno indicado
  */
 bool EsOpcionValida(char terreno, int altura, int op) {
+  if (terreno == '?') return (op == 0);
   if (terreno == 'M' or terreno == 'P' or terreno == 'B') return false; // no se puede construir en muros, precipicios o bosques
   if (op == 1 and (terreno == 'A' or altura >= 9)) return false;  // RAISE
   if (op == -1 and (terreno == 'A' or altura <= 1)) return false; // DIG
@@ -1247,7 +1249,44 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
  */
 Action ComportamientoIngeniero::ComportamientoIngenieroNivel_6(Sensores sensores)
 {
-  return IDLE;
+  // Durante la exploración, nivel 1 llama a ActualizarMapa internamente
+  // En el resto de estados lo llamamos aquí
+  if (estado_eng != ENG_EXPLORAR) ActualizarMapa(sensores);
+
+  switch(estado_eng) {
+    case ENG_EXPLORAR: {
+      // Vemos si hemos descubierto alguna 'U'
+      bool hay_U = false;
+      for (auto& row : mapaResultado) {
+        for (auto& cell : row) {
+          if (cell == 'U') {
+            hay_U = true;
+            break;
+          }
+        }
+      }
+
+      // Intentamos planificar una vez conocemos la meta
+      if (hay_U and ++ticks_exploracion % 30 == 0) {
+        int max_energia = sensores.energia;
+        int max_eco = sensores.max_ecologico;
+        listaCanalizacionTuberias = PlanificarTuberias_AStar(sensores.BelPosF, sensores.BelPosC, 
+                                                            max_energia, max_eco, mapaResultado, mapaCotas);
+        
+        if (!listaCanalizacionTuberias.empty()) {
+          estado_eng = ENG_INIT_TRAMO;
+          casilla_tech_preparada = false;
+          return IDLE;
+        }
+      }
+
+      // Seguir explorando con comportamiento nivel 1
+      return ComportamientoIngenieroNivel_1(sensores);
+    }
+
+    default:
+      return ComportamientoIngenieroNivel_5(sensores);
+  }
 }
 // --------------------------------------------------------------------------------
 // ================================================================================

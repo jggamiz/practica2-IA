@@ -101,6 +101,7 @@ struct NodoTubo {
 };
 
 enum EstadoIngeniero {
+  ENG_EXPLORAR,
   ENG_PLANIFICAR_RED,
   ENG_INIT_TRAMO,
   ENG_IR_A_TECH,
@@ -108,8 +109,7 @@ enum EstadoIngeniero {
   ENG_LLAMAR_TECH,
   ENG_IR_A_ENG,
   ENG_PREPARAR_ENG,
-  ENG_ESPERAR_SYNC,
-  ENG_CEDER_PASO
+  ENG_ESPERAR_SYNC
 };
 
 
@@ -130,6 +130,8 @@ public:
     giro45Izq = 0;
     giro45Dch = 0;
     giros_buscando = 0;
+    estado_eng = ENG_EXPLORAR;
+    ticks_exploracion = 0;
   }
 
   /**
@@ -332,6 +334,7 @@ EstadoIngeniero estado_eng;
 Paso casilla_eng;
 Paso casilla_tech;
 bool casilla_tech_preparada;
+int ticks_exploracion;
 };
 
 #endif
