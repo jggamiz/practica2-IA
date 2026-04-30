@@ -857,7 +857,7 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
       char terr_actual = mapaResultado[pos_frente.first][pos_frente.second];
       int diff_altura = abs(sensores.cota[2] - sensores.cota[0]);
 
-      bool peligroso = (terr_actual == 'P') or (diff_altura > 1 && terr_actual != '?');
+      bool peligroso = (terr_actual == 'P') or (diff_altura > 1 and terr_actual != '?');
       
       if (peligroso) plan.clear();
     }
