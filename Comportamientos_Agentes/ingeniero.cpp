@@ -808,7 +808,7 @@ void ObtenerCostesTubo(char terreno, int op, int &energia, int &eco) {
  * @brief Comprueba si la operación de altura es válida en el terreno indicado
  */
 bool EsOpcionValida(char terreno, int altura, int op) {
-  if (terreno == '?') return (op == 0);
+  if (terreno == '?') return false; // return (op==0)
   if (terreno == 'M' or terreno == 'P' or terreno == 'B') return false; // no se puede construir en muros, precipicios o bosques
   if (op == 1 and (terreno == 'A' or altura >= 9)) return false;  // RAISE
   if (op == -1 and (terreno == 'A' or altura <= 1)) return false; // DIG
@@ -990,6 +990,14 @@ Orientacion RumboHaciaI(int f1, int c1, int f2, int c2) {
   return norte;
 }
 
+vector<vector<unsigned char>> MapaSinDesconocidosI(const vector<vector<unsigned char>> &mapa) {
+  auto mapaSeguro = mapa;
+    for (auto& row : mapaSeguro)
+      for (auto& cell : row)
+        if (cell == '?') cell = 'M';
+  return mapaSeguro;
+}
+
 /**
  * @brief Comportamiento del ingeniero para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
@@ -1080,6 +1088,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
+      //auto mapaSeguro = MapaSinDesconocidosI(mapaResultado);
+      //plan = B_Anchura_Nivel2(inicio, final, mapaSeguro, mapaCotas);
       plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
 
       // Restauramos el mapa
@@ -1103,6 +1113,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     if (plan.empty()) {
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_tech.fil, casilla_tech.col, norte};
+      //auto mapaSeguro = MapaSinDesconocidosI(mapaResultado);
+      //plan = B_Anchura_Nivel2(inicio, final, mapaSeguro, mapaCotas);
       plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
     }
 
@@ -1159,6 +1171,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
 
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_eng.fil, casilla_eng.col, norte};
+      //auto mapaSeguro = MapaSinDesconocidosI(mapaResultado);
+      //plan = B_Anchura_Nivel2(inicio, final, mapaSeguro, mapaCotas);
       plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
 
       // Restauramos el mapa
@@ -1182,6 +1196,8 @@ Action ComportamientoIngeniero::ComportamientoIngenieroNivel_5(Sensores sensores
     if (plan.empty()) {
       EstadoI inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoI final = {casilla_eng.fil, casilla_eng.col, norte};
+      //auto mapaSeguro = MapaSinDesconocidosI(mapaResultado);
+      //plan = B_Anchura_Nivel2(inicio, final, mapaSeguro, mapaCotas);
       plan = B_Anchura_Nivel2(inicio, final, mapaResultado, mapaCotas);
     }
 

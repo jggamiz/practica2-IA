@@ -822,6 +822,14 @@ Orientacion RumboHaciaT(int f1, int c1, int f2, int c2) {
   return norte;
 }
 
+vector<vector<unsigned char>> MapaSinDesconocidosT(const vector<vector<unsigned char>> &mapa) {
+  auto mapaSeguro = mapa;
+    for (auto& row : mapaSeguro)
+      for (auto& cell : row)
+        if (cell == '?') cell = 'M';
+  return mapaSeguro;
+}
+
 /**
  * @brief Comportamiento del técnico para el Nivel 5.
  * @param sensores Datos actuales de los sensores.
@@ -881,6 +889,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
 
       EstadoT inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoT final = {destino_f, destino_c, norte};
+      //auto mapaSeguro = MapaSinDesconocidosT(mapaResultado);
+      //plan = A_Star(inicio, final, mapaSeguro, mapaCotas);
       plan = A_Star(inicio, final, mapaResultado, mapaCotas);
 
       // Restauramos el mapa
@@ -909,6 +919,8 @@ Action ComportamientoTecnico::ComportamientoTecnicoNivel_5(Sensores sensores) {
     if (plan.empty()) {
       EstadoT inicio = {sensores.posF, sensores.posC, sensores.rumbo};
       EstadoT final = {destino_f, destino_c, norte};
+      //auto mapaSeguro = MapaSinDesconocidosT(mapaResultado);
+      //plan = A_Star(inicio, final, mapaSeguro, mapaCotas);
       plan = A_Star(inicio, final, mapaResultado, mapaCotas);
     }
 
