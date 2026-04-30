@@ -915,8 +915,9 @@ list<Paso> ComportamientoIngeniero::PlanificarTuberias_AStar(int f_bel, int c_be
           int alt_mod_next = n_alt + n_op;
 
           // El origen debe ser igual o una unidad mayor que el destino
-          int diff_altura = alt_mod_current - alt_mod_next;
-          if (diff_altura == 0 or diff_altura == 1) {
+          //int diff_altura = alt_mod_current - alt_mod_next;
+          //if (diff_altura == 0 or diff_altura == 1) {
+          if (alt_mod_current >= alt_mod_next) {
             int coste_energ, coste_eco;
             ObtenerCostesTubo(n_terr, n_op, coste_energ, coste_eco);
 
